@@ -9,3 +9,4 @@ description = "A small game for the Bevy Jam 2023"
 
 [dependencies]
 bevy = "0.10"
+bevy-inspector-egui = "0.18"
