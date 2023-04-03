@@ -2,7 +2,10 @@
 name = "bevy_jam_2023"
 version = "0.1.0"
 edition = "2021"
+authors = ["Rehatbir Singh <rehatbir@gmail.com>"]
+description = "A small game for the Bevy Jam 2023"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bevy = "0.10"
