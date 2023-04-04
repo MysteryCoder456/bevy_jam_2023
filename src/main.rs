@@ -3,6 +3,10 @@ use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
 #[cfg(debug_assertions)]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
+mod main_menu;
+
+use main_menu::MainMenuPlugin;
+
 #[derive(Component)]
 struct MainCamera;
 
@@ -31,9 +35,8 @@ fn main() {
         ..Default::default()
     }))
     .add_state::<GameState>()
-    .add_startup_systems((setup_camera, setup_assets))
-    .add_system(spawn_main_menu.in_schedule(OnEnter(GameState::MainMenu)))
-    .add_systems((button_appearance_system,).in_set(OnUpdate(GameState::MainMenu)));
+    .add_plugin(MainMenuPlugin)
+    .add_startup_systems((setup_camera, setup_assets));
 
     #[cfg(debug_assertions)]
     app.add_plugin(WorldInspectorPlugin::new());
@@ -61,63 +64,4 @@ fn setup_assets(mut commands: Commands, asset_server: Res<AssetServer>) {
     };
 
     commands.insert_resource(ui_assets);
-}
-
-fn spawn_main_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
-    commands
-        .spawn(NodeBundle {
-            style: Style {
-                size: Size::new(Val::Percent(100.), Val::Percent(100.)),
-                display: Display::Flex,
-                gap: Size::new(Val::Undefined, Val::Px(8.)),
-                flex_direction: FlexDirection::Column,
-                justify_content: JustifyContent::Center,
-                align_items: AlignItems::Center,
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .with_children(|n| {
-            n.spawn(TextBundle::from_section(
-                "EXPIRED!",
-                TextStyle {
-                    font: ui_assets.font.clone(),
-                    font_size: 60.,
-                    color: Color::BLACK,
-                },
-            ));
-
-            n.spawn(ButtonBundle {
-                image: UiImage::new(ui_assets.button.clone()),
-                style: Style {
-                    padding: UiRect::new(Val::Px(25.), Val::Px(25.), Val::Px(14.), Val::Px(14.)),
-                    ..Default::default()
-                },
-                ..Default::default()
-            })
-            .with_children(|b| {
-                b.spawn(TextBundle::from_section(
-                    "Play",
-                    TextStyle {
-                        font: ui_assets.font.clone(),
-                        font_size: 38.,
-                        color: Color::BLACK,
-                    },
-                ));
-            });
-        });
-}
-
-fn button_appearance_system(
-    mut query: Query<(&mut UiImage, &Interaction), Changed<Interaction>>,
-    ui_assets: Res<UIAssets>,
-) {
-    for (mut ui_image, interaction) in query.iter_mut() {
-        let new_image = match *interaction {
-            Interaction::Clicked => ui_assets.button_pressed.clone(),
-            _ => ui_assets.button.clone(),
-        };
-
-        *ui_image = UiImage::new(new_image);
-    }
 }
