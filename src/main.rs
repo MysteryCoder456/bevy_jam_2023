@@ -52,6 +52,7 @@ fn main() {
             .set(WindowPlugin {
                 primary_window: Some(Window {
                     title: "Expired!".to_owned(),
+                    fit_canvas_to_parent: true,
                     ..Default::default()
                 }),
                 ..Default::default()
