@@ -124,7 +124,7 @@ fn setup_game_data(mut commands: Commands) {
     } else {
         let default_game_data = GameData::default();
         let encoded = bincode::encode_to_vec(&default_game_data, config).unwrap();
-        std::fs::write(game_data_path, &encoded).unwrap();
+        _ = std::fs::write(game_data_path, &encoded);
         default_game_data
     };
 
