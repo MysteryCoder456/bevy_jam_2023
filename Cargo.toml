@@ -9,5 +9,8 @@ description = "A small game for the Bevy Jam 2023"
 
 [dependencies]
 bevy = "0.10"
-bevy-inspector-egui = "0.18"
+bevy-inspector-egui = { version = "0.18", optional = true }
 bincode = "2.0.0-rc.3"
+
+[features]
+inspector = ["dep:bevy-inspector-egui"]

@@ -1,11 +1,12 @@
 use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
 use bincode::{Decode, Encode};
-use game::GamePlugins;
+use game::GamePlugin;
 use main_menu::MainMenuPlugin;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "inspector")]
 use bevy_inspector_egui::quick::{ResourceInspectorPlugin, WorldInspectorPlugin};
 
+mod components;
 mod game;
 mod main_menu;
 
@@ -58,12 +59,14 @@ fn main() {
     )
     .add_state::<GameState>()
     .add_plugin(MainMenuPlugin)
-    .add_plugins(GamePlugins)
+    .add_plugin(GamePlugin)
     .add_startup_systems((setup_camera, setup_assets, setup_game_data));
 
-    #[cfg(debug_assertions)]
+    #[cfg(feature = "inspector")]
     app.add_plugin(WorldInspectorPlugin::new())
         .register_type::<GameData>()
+        .register_type::<components::Velocity>()
+        .register_type::<components::Gravity>()
         .add_plugin(ResourceInspectorPlugin::<GameData>::default());
 
     app.run();
