@@ -30,6 +30,7 @@ struct UIAssets {
 #[derive(Resource)]
 struct GameAssets {
     player_idle: Handle<TextureAtlas>,
+    player_run: Handle<TextureAtlas>,
 }
 
 #[derive(Resource, Encode, Decode, Reflect)]
@@ -100,7 +101,15 @@ fn setup_assets(
         TextureAtlas::from_grid(player_idle_texture, Vec2::new(32., 32.), 20, 1, None, None);
     let player_idle = texture_atlases.add(player_idle_atlas);
 
-    let game_assets = GameAssets { player_idle };
+    let player_run_texture: Handle<Image> = asset_server.load("player/player_run.png");
+    let player_run_atlas =
+        TextureAtlas::from_grid(player_run_texture, Vec2::new(32., 32.), 6, 1, None, None);
+    let player_run = texture_atlases.add(player_run_atlas);
+
+    let game_assets = GameAssets {
+        player_idle,
+        player_run,
+    };
 
     commands.insert_resource(ui_assets);
     commands.insert_resource(game_assets);

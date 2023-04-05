@@ -5,8 +5,8 @@ use crate::{
     GameAssets, GameState,
 };
 
-const ANIMATION_SPEED: f32 = 12.; // in frames per second
-const PLAYER_SPEED: f32 = 400.;
+const ANIMATION_SPEED: f32 = 14.; // in frames per second
+const PLAYER_SPEED: f32 = 200.;
 
 #[derive(Component)]
 struct Player {
@@ -14,12 +14,30 @@ struct Player {
     animation_length: usize,
 }
 
+#[derive(States, Default, Clone, Debug, Hash, Eq, PartialEq)]
+enum PlayerState {
+    #[default]
+    Idle,
+    Running,
+    Jumping,
+    Falling,
+}
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(spawn_player.in_schedule(OnEnter(GameState::Level)))
-            .add_systems((player_animation_system,).in_set(OnUpdate(GameState::Level)))
+        app.add_state::<PlayerState>()
+            .add_system(spawn_player.in_schedule(OnEnter(GameState::Level)))
+            .add_systems(
+                (
+                    player_state_system,
+                    player_atlas_change_system.run_if(state_changed::<PlayerState>()),
+                    player_animation_system,
+                )
+                    .chain()
+                    .in_set(OnUpdate(GameState::Level)),
+            )
             .add_systems(
                 (player_movement_system,)
                     .in_set(OnUpdate(GameState::Level))
@@ -46,8 +64,54 @@ fn spawn_player(mut commands: Commands, game_assets: Res<GameAssets>) {
             animation_length: 15,
         },
         Velocity(Vec2::ZERO),
-        Gravity(Vec2::NEG_Y),
+        Gravity(Vec2::ZERO), // Change this back to NEG_Y
     ));
+}
+
+fn player_state_system(
+    mut player_state: ResMut<NextState<PlayerState>>,
+    query: Query<&Velocity, (With<Player>, Changed<Velocity>)>,
+) {
+    if let Ok(velocity) = query.get_single() {
+        let next_state = if velocity.0.y > 0. {
+            PlayerState::Jumping
+        } else if velocity.0.y < 0. {
+            PlayerState::Falling
+        } else if velocity.0.x != 0. {
+            PlayerState::Running
+        } else {
+            PlayerState::Idle
+        };
+
+        player_state.set(next_state);
+    }
+}
+
+fn player_atlas_change_system(
+    player_state: Res<State<PlayerState>>,
+    game_assets: Res<GameAssets>,
+    texture_atlases: Res<Assets<TextureAtlas>>,
+    mut query: Query<(
+        &mut Handle<TextureAtlas>,
+        &mut TextureAtlasSprite,
+        &mut Player,
+    )>,
+) {
+    if let Ok((mut atlas, mut sprite, mut player)) = query.get_single_mut() {
+        // FIXME: change the atlases for jumping and falling once the assets are made
+        let new_atlas = match player_state.0 {
+            PlayerState::Idle => game_assets.player_idle.clone(),
+            PlayerState::Running => game_assets.player_run.clone(),
+            PlayerState::Jumping => game_assets.player_run.clone(),
+            PlayerState::Falling => game_assets.player_run.clone(),
+        };
+
+        if *atlas != new_atlas {
+            player.animation_length = texture_atlases.get(&new_atlas).unwrap().textures.len();
+            *atlas = new_atlas;
+            sprite.index = 0;
+        }
+    }
 }
 
 fn player_animation_system(
