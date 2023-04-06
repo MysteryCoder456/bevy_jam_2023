@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use super::SPRITE_SCALE;
 use crate::{
     components::{Gravity, RectCollider, Velocity},
-    GameAssets, GameState,
+    GameAssets, GameState, MainCamera,
 };
 
 const ANIMATION_SPEED: f32 = 16.; // in frames per second
@@ -34,10 +34,12 @@ impl Plugin for PlayerPlugin {
             .add_systems(
                 (
                     player_state_system,
-                    player_atlas_change_system.run_if(state_changed::<PlayerState>()),
-                    player_animation_system,
+                    player_atlas_change_system
+                        .run_if(state_changed::<PlayerState>())
+                        .after(player_state_system),
+                    player_animation_system.after(player_atlas_change_system),
+                    camera_follow_system,
                 )
-                    .chain()
                     .in_set(OnUpdate(GameState::Level)),
             )
             .add_systems(
@@ -128,6 +130,17 @@ fn player_animation_system(
 
         if player.animation_timer.finished() {
             sprite.index = (sprite.index + 1) % player.animation_length;
+        }
+    }
+}
+
+fn camera_follow_system(
+    mut camera_query: Query<&mut Transform, With<MainCamera>>,
+    player_query: Query<&Transform, (With<Player>, Without<MainCamera>)>,
+) {
+    if let Ok(mut camera_tf) = camera_query.get_single_mut() {
+        if let Ok(player_tf) = player_query.get_single() {
+            camera_tf.translation = player_tf.translation;
         }
     }
 }
