@@ -1,7 +1,8 @@
 use bevy::prelude::*;
 
+use super::SPRITE_SCALE;
 use crate::{
-    components::{Gravity, Velocity},
+    components::{Gravity, RectCollider, Velocity},
     GameAssets, GameState,
 };
 
@@ -51,7 +52,7 @@ fn spawn_player(mut commands: Commands, game_assets: Res<GameAssets>) {
         SpriteSheetBundle {
             texture_atlas: game_assets.player_idle.clone(),
             transform: Transform {
-                scale: Vec3::new(3., 3., 1.),
+                scale: Vec3::ONE * SPRITE_SCALE,
                 ..Default::default()
             },
             ..Default::default()
@@ -64,7 +65,10 @@ fn spawn_player(mut commands: Commands, game_assets: Res<GameAssets>) {
             animation_length: 15,
         },
         Velocity(Vec2::ZERO),
-        Gravity(Vec2::ZERO), // Change this back to NEG_Y
+        Gravity(Vec2::NEG_Y),
+        RectCollider {
+            size: Vec2::new(14., 32.) * SPRITE_SCALE,
+        },
     ));
 }
 
@@ -73,9 +77,9 @@ fn player_state_system(
     query: Query<&Velocity, (With<Player>, Changed<Velocity>)>,
 ) {
     if let Ok(velocity) = query.get_single() {
-        let next_state = if velocity.0.y > 0. {
+        let next_state = if velocity.0.y >= 20. {
             PlayerState::Jumping
-        } else if velocity.0.y < 0. {
+        } else if velocity.0.y <= -55. {
             PlayerState::Falling
         } else if velocity.0.x != 0. {
             PlayerState::Running

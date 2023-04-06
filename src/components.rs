@@ -5,3 +5,8 @@ pub struct Velocity(pub Vec2);
 
 #[derive(Component, Reflect)]
 pub struct Gravity(pub Vec2);
+
+#[derive(Component)]
+pub struct RectCollider {
+    pub size: Vec2,
+}

@@ -31,6 +31,7 @@ struct UIAssets {
 struct GameAssets {
     player_idle: Handle<TextureAtlas>,
     player_run: Handle<TextureAtlas>,
+    platform: Handle<Image>,
 }
 
 #[derive(Resource, Encode, Decode, Reflect)]
@@ -110,6 +111,7 @@ fn setup_assets(
     let game_assets = GameAssets {
         player_idle,
         player_run,
+        platform: asset_server.load("platform/platform.png"),
     };
 
     commands.insert_resource(ui_assets);
