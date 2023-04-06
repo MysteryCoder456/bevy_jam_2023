@@ -6,8 +6,9 @@ use crate::{
     GameAssets, GameState,
 };
 
-const ANIMATION_SPEED: f32 = 14.; // in frames per second
-const PLAYER_SPEED: f32 = 200.;
+const ANIMATION_SPEED: f32 = 16.; // in frames per second
+const RUN_SPEED: f32 = 350.;
+const JUMP_SPEED: f32 = 1000.;
 
 #[derive(Component)]
 struct Player {
@@ -77,9 +78,9 @@ fn player_state_system(
     query: Query<&Velocity, (With<Player>, Changed<Velocity>)>,
 ) {
     if let Ok(velocity) = query.get_single() {
-        let next_state = if velocity.0.y >= 20. {
+        let next_state = if velocity.0.y > 0. {
             PlayerState::Jumping
-        } else if velocity.0.y <= -55. {
+        } else if velocity.0.y < 0. {
             PlayerState::Falling
         } else if velocity.0.x != 0. {
             PlayerState::Running
@@ -133,6 +134,7 @@ fn player_animation_system(
 
 fn player_movement_system(
     kb: Res<Input<KeyCode>>,
+    player_state: Res<State<PlayerState>>,
     mut query: Query<(&mut Velocity, &mut TextureAtlasSprite), With<Player>>,
 ) {
     if let Ok((mut velocity, mut sprite)) = query.get_single_mut() {
@@ -144,6 +146,13 @@ fn player_movement_system(
             sprite.flip_x = false;
         }
 
-        velocity.0.x = x_direction as f32 * PLAYER_SPEED;
+        velocity.0.x = x_direction as f32 * RUN_SPEED;
+
+        if kb.just_pressed(KeyCode::W) {
+            match player_state.0 {
+                PlayerState::Idle | PlayerState::Running => velocity.0.y = JUMP_SPEED,
+                _ => {}
+            }
+        }
     }
 }

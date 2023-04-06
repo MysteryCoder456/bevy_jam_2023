@@ -25,11 +25,8 @@ impl Plugin for GamePlugin {
             .add_plugin(PlatformPlugin)
             .add_system(spawn_world.in_schedule(OnEnter(GameState::Level)))
             .add_systems(
-                (
-                    velocity_system,
-                    gravity_system.before(velocity_system),
-                    collision_system.before(velocity_system),
-                )
+                (gravity_system, velocity_system, collision_system)
+                    .chain()
                     .in_set(OnUpdate(GameState::Level))
                     .in_schedule(CoreSchedule::FixedUpdate),
             )
@@ -42,9 +39,9 @@ fn spawn_world(mut events: EventWriter<SpawnPlatformEvent>) {
     events.send(SpawnPlatformEvent(Vec2::new(0., -200.)));
 }
 
-fn velocity_system(time: Res<Time>, mut query: Query<(&mut Transform, &Velocity)>) {
+fn velocity_system(time: Res<FixedTime>, mut query: Query<(&mut Transform, &Velocity)>) {
     for (mut tf, velocity) in query.iter_mut() {
-        tf.translation += velocity.0.extend(0.) * time.delta_seconds();
+        tf.translation += velocity.0.extend(0.) * time.period.as_secs_f32();
     }
 }
 
