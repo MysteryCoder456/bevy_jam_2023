@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use super::SPRITE_SCALE;
-use crate::{components::RectCollider, GameAssets, GameState};
+use crate::{components::RectCollisionShape, GameAssets, GameState};
 
 pub struct SpawnPlatformEvent(pub Vec2);
 
@@ -12,8 +12,11 @@ pub struct PlatformPlugin;
 
 impl Plugin for PlatformPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<SpawnPlatformEvent>()
-            .add_system(spawn_platform.in_set(OnUpdate(GameState::Level)));
+        app.add_event::<SpawnPlatformEvent>().add_system(
+            spawn_platform
+                .in_set(OnUpdate(GameState::Level))
+                .run_if(on_event::<SpawnPlatformEvent>()),
+        );
     }
 }
 
@@ -34,8 +37,9 @@ fn spawn_platform(
                 ..Default::default()
             },
             Platform,
-            RectCollider {
+            RectCollisionShape {
                 size: Vec2::new(64., 16.) * SPRITE_SCALE,
+                collide: true,
             },
         ));
     }

@@ -71,6 +71,7 @@ fn main() {
         .register_type::<GameData>()
         .register_type::<components::Velocity>()
         .register_type::<components::Gravity>()
+        .register_type::<components::RectCollisionShape>()
         .add_plugin(ResourceInspectorPlugin::<GameData>::default());
 
     app.run();
@@ -110,7 +111,7 @@ fn setup_assets(
     let player_run = texture_atlases.add(player_run_atlas);
 
     let pill_texture: Handle<Image> = asset_server.load("pill/pill.png");
-    let pill_atlas = TextureAtlas::from_grid(pill_texture, Vec2::new(32., 32.), 44, 1, None, None);
+    let pill_atlas = TextureAtlas::from_grid(pill_texture, Vec2::new(32., 32.), 45, 1, None, None);
     let pill = texture_atlases.add(pill_atlas);
 
     let game_assets = GameAssets {

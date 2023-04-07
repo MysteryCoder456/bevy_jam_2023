@@ -2,15 +2,17 @@ use bevy::{
     prelude::*,
     sprite::collide_aabb::{collide, Collision},
 };
+use pill::{PillPlugin, SpawnPillEvent};
 use platform::{PlatformPlugin, SpawnPlatformEvent};
 use player::PlayerPlugin;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    components::{Gravity, RectCollider, Velocity},
+    components::{Gravity, RectCollisionShape, Velocity},
     GameData, GameState,
 };
 
+mod pill;
 mod platform;
 mod player;
 
@@ -21,6 +23,7 @@ const GRAVITY: f32 = 50.;
 #[derive(Serialize, Deserialize)]
 struct LevelData {
     platforms: Vec<Vec2>,
+    pills: Vec<Vec2>,
 }
 
 pub struct GamePlugin;
@@ -29,6 +32,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(PlayerPlugin)
             .add_plugin(PlatformPlugin)
+            .add_plugin(PillPlugin)
             .add_system(spawn_world.in_schedule(OnEnter(GameState::Level)))
             .add_systems(
                 (gravity_system, velocity_system, collision_system)
@@ -40,7 +44,11 @@ impl Plugin for GamePlugin {
     }
 }
 
-fn spawn_world(mut platform_events: EventWriter<SpawnPlatformEvent>, game_data: Res<GameData>) {
+fn spawn_world(
+    mut platform_events: EventWriter<SpawnPlatformEvent>,
+    mut pill_events: EventWriter<SpawnPillEvent>,
+    game_data: Res<GameData>,
+) {
     let filepath = format!("levels/level{}.json", game_data.current_level);
     let level_file = std::fs::File::open(filepath).unwrap(); // FIXME: doesn't work on WASM
     let level_data: LevelData = serde_json::from_reader(level_file).unwrap();
@@ -51,6 +59,7 @@ fn spawn_world(mut platform_events: EventWriter<SpawnPlatformEvent>, game_data: 
             .iter()
             .map(|pos| SpawnPlatformEvent(*pos)),
     );
+    pill_events.send_batch(level_data.pills.iter().map(|pos| SpawnPillEvent(*pos)));
 }
 
 fn velocity_system(time: Res<FixedTime>, mut query: Query<(&mut Transform, &Velocity)>) {
@@ -66,11 +75,15 @@ fn gravity_system(mut query: Query<(&mut Velocity, &Gravity)>) {
 }
 
 fn collision_system(
-    mut movable_query: Query<(&mut Transform, &mut Velocity, &RectCollider)>,
-    static_query: Query<(&Transform, &RectCollider), Without<Velocity>>,
+    mut movable_query: Query<(&mut Transform, &mut Velocity, &RectCollisionShape)>,
+    static_query: Query<(&Transform, &RectCollisionShape), Without<Velocity>>,
 ) {
     for (mut movable_tf, mut movable_vel, movable_col) in movable_query.iter_mut() {
         for (static_tf, static_col) in static_query.iter() {
+            if !(movable_col.collide && static_col.collide) {
+                continue;
+            }
+
             let collision = collide(
                 movable_tf.translation,
                 movable_col.size,

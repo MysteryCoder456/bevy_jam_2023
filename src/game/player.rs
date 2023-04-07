@@ -2,11 +2,11 @@ use bevy::prelude::*;
 
 use super::{platform::SpawnPlatformEvent, SPRITE_SCALE};
 use crate::{
-    components::{Gravity, RectCollider, Velocity},
+    components::{Gravity, RectCollisionShape, Velocity},
     GameAssets, GameState, MainCamera,
 };
 
-const ANIMATION_SPEED: f32 = 16.; // in frames per second
+const ANIMATION_SPEED: f32 = 16.; // frames per second
 const RUN_SPEED: f32 = 350.;
 const JUMP_SPEED: f32 = 1000.;
 
@@ -73,8 +73,9 @@ fn spawn_player(mut commands: Commands, game_assets: Res<GameAssets>) {
         },
         Velocity(Vec2::ZERO),
         Gravity(Vec2::NEG_Y),
-        RectCollider {
+        RectCollisionShape {
             size: Vec2::new(14., 32.) * SPRITE_SCALE,
+            collide: true,
         },
     ));
 }
