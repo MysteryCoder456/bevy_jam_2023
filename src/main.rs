@@ -32,6 +32,7 @@ struct GameAssets {
     player_idle: Handle<TextureAtlas>,
     player_run: Handle<TextureAtlas>,
     platform: Handle<Image>,
+    pill: Handle<TextureAtlas>,
 }
 
 #[derive(Resource, Encode, Decode, Reflect)]
@@ -108,10 +109,15 @@ fn setup_assets(
         TextureAtlas::from_grid(player_run_texture, Vec2::new(32., 32.), 6, 1, None, None);
     let player_run = texture_atlases.add(player_run_atlas);
 
+    let pill_texture: Handle<Image> = asset_server.load("pill/pill.png");
+    let pill_atlas = TextureAtlas::from_grid(pill_texture, Vec2::new(32., 32.), 44, 1, None, None);
+    let pill = texture_atlases.add(pill_atlas);
+
     let game_assets = GameAssets {
         player_idle,
         player_run,
         platform: asset_server.load("platform/platform.png"),
+        pill,
     };
 
     commands.insert_resource(ui_assets);
