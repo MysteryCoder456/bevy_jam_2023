@@ -42,7 +42,7 @@ fn spawn_main_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
         ))
         .with_children(|n| {
             n.spawn(TextBundle::from_section(
-                "EXPIRED!",
+                "EXPIRY DATE",
                 TextStyle {
                     font: ui_assets.font.clone(),
                     font_size: 60.,

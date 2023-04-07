@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     components::{Gravity, RectCollisionShape, Velocity},
-    GameData, GameState,
+    GameData, GameState, UIAssets,
 };
 
 mod pill;
@@ -26,6 +26,12 @@ struct LevelData {
     pills: Vec<Vec2>,
 }
 
+#[derive(Component)]
+struct HUD;
+
+#[derive(Component)]
+struct CollectedLabel;
+
 pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
@@ -33,7 +39,7 @@ impl Plugin for GamePlugin {
         app.add_plugin(PlayerPlugin)
             .add_plugin(PlatformPlugin)
             .add_plugin(PillPlugin)
-            .add_system(spawn_world.in_schedule(OnEnter(GameState::Level)))
+            .add_systems((spawn_world, spawn_hud).in_schedule(OnEnter(GameState::Level)))
             .add_systems(
                 (gravity_system, velocity_system, collision_system)
                     .chain()
@@ -60,6 +66,49 @@ fn spawn_world(
             .map(|pos| SpawnPlatformEvent(*pos)),
     );
     pill_events.send_batch(level_data.pills.iter().map(|pos| SpawnPillEvent(*pos)));
+}
+
+fn spawn_hud(mut commands: Commands, ui_assets: Res<UIAssets>) {
+    commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                    flex_direction: FlexDirection::Column,
+                    justify_content: JustifyContent::FlexStart,
+                    padding: UiRect::all(Val::Px(10.)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            HUD,
+        ))
+        .with_children(|hud| {
+            hud.spawn(NodeBundle {
+                style: Style {
+                    size: Size::new(Val::Percent(100.), Val::Auto),
+                    flex_direction: FlexDirection::Row,
+                    justify_content: JustifyContent::FlexEnd,
+                    ..Default::default()
+                },
+                ..Default::default()
+            })
+            .with_children(|top_row| {
+                let style = TextStyle {
+                    font: ui_assets.font.clone(),
+                    font_size: 30.,
+                    color: Color::BLACK,
+                };
+
+                top_row.spawn((
+                    TextBundle::from_sections([
+                        TextSection::new("Collected: ", style.clone()),
+                        TextSection::new("0", style.clone()),
+                    ]),
+                    CollectedLabel,
+                ));
+            });
+        });
 }
 
 fn velocity_system(time: Res<FixedTime>, mut query: Query<(&mut Transform, &Velocity)>) {

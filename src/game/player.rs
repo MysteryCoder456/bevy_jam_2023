@@ -1,6 +1,6 @@
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 
-use super::{pill::Pill, platform::SpawnPlatformEvent, SPRITE_SCALE};
+use super::{pill::Pill, platform::SpawnPlatformEvent, CollectedLabel, SPRITE_SCALE};
 use crate::{
     components::{Gravity, RectCollisionShape, Velocity},
     GameAssets, GameState, MainCamera,
@@ -171,6 +171,7 @@ fn player_pill_collision_system(
     mut commands: Commands,
     mut player_query: Query<(&Transform, &RectCollisionShape, &mut Player)>,
     pill_query: Query<(Entity, &Transform, &RectCollisionShape), (With<Pill>, Without<Player>)>,
+    mut label_query: Query<&mut Text, With<CollectedLabel>>,
 ) {
     if let Ok((player_tf, player_col, mut player)) = player_query.get_single_mut() {
         for (pill_entity, pill_tf, pill_col) in pill_query.iter() {
@@ -184,6 +185,10 @@ fn player_pill_collision_system(
             if collision.is_some() {
                 player.medicines_collected += 1;
                 commands.entity(pill_entity).despawn();
+
+                if let Ok(mut text) = label_query.get_single_mut() {
+                    text.sections[1].value = player.medicines_collected.to_string();
+                }
             }
         }
     }
