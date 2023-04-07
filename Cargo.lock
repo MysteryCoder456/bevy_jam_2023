@@ -673,6 +673,8 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bincode",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

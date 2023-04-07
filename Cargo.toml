@@ -11,6 +11,8 @@ description = "A small game for the Bevy Jam 2023"
 bevy = "0.10"
 bevy-inspector-egui = { version = "0.18", optional = true }
 bincode = "2.0.0-rc.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [features]
 inspector = ["dep:bevy-inspector-egui"]

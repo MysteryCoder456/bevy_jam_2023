@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::SPRITE_SCALE;
+use super::{platform::SpawnPlatformEvent, SPRITE_SCALE};
 use crate::{
     components::{Gravity, RectCollider, Velocity},
     GameAssets, GameState, MainCamera,
@@ -39,6 +39,10 @@ impl Plugin for PlayerPlugin {
                         .after(player_state_system),
                     player_animation_system.after(player_atlas_change_system),
                     camera_follow_system,
+                    // TODO: Remove this once levels have been made
+                    spawn_platform_below_player.run_if(
+                        bevy::input::common_conditions::input_just_pressed(KeyCode::Equals),
+                    ),
                 )
                     .in_set(OnUpdate(GameState::Level)),
             )
@@ -73,6 +77,18 @@ fn spawn_player(mut commands: Commands, game_assets: Res<GameAssets>) {
             size: Vec2::new(14., 32.) * SPRITE_SCALE,
         },
     ));
+}
+
+/// Used for debugging only. Must be removed in production.
+fn spawn_platform_below_player(
+    mut events: EventWriter<SpawnPlatformEvent>,
+    query: Query<&Transform, With<Player>>,
+) {
+    if let Ok(player_tf) = query.get_single() {
+        events.send(SpawnPlatformEvent(
+            player_tf.translation.truncate() - Vec2::new(0., 90.),
+        ));
+    }
 }
 
 fn player_state_system(

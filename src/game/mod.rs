@@ -4,10 +4,11 @@ use bevy::{
 };
 use platform::{PlatformPlugin, SpawnPlatformEvent};
 use player::PlayerPlugin;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     components::{Gravity, RectCollider, Velocity},
-    GameState,
+    GameData, GameState,
 };
 
 mod platform;
@@ -16,6 +17,11 @@ mod player;
 const SPRITE_SCALE: f32 = 3.;
 const FIXED_TIMESTEP: f32 = 1. / 60.;
 const GRAVITY: f32 = 50.;
+
+#[derive(Serialize, Deserialize)]
+struct LevelData {
+    platforms: Vec<Vec2>,
+}
 
 pub struct GamePlugin;
 
@@ -34,9 +40,17 @@ impl Plugin for GamePlugin {
     }
 }
 
-fn spawn_world(mut events: EventWriter<SpawnPlatformEvent>) {
-    // TODO: Load the corresponding level from GameData resource
-    events.send(SpawnPlatformEvent(Vec2::new(0., -200.)));
+fn spawn_world(mut platform_events: EventWriter<SpawnPlatformEvent>, game_data: Res<GameData>) {
+    let filepath = format!("levels/level{}.json", game_data.current_level);
+    let level_file = std::fs::File::open(filepath).unwrap();
+    let level_data: LevelData = serde_json::from_reader(level_file).unwrap();
+
+    platform_events.send_batch(
+        level_data
+            .platforms
+            .iter()
+            .map(|pos| SpawnPlatformEvent(*pos)),
+    );
 }
 
 fn velocity_system(time: Res<FixedTime>, mut query: Query<(&mut Transform, &Velocity)>) {
