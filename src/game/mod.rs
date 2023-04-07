@@ -42,7 +42,7 @@ impl Plugin for GamePlugin {
 
 fn spawn_world(mut platform_events: EventWriter<SpawnPlatformEvent>, game_data: Res<GameData>) {
     let filepath = format!("levels/level{}.json", game_data.current_level);
-    let level_file = std::fs::File::open(filepath).unwrap();
+    let level_file = std::fs::File::open(filepath).unwrap(); // FIXME: doesn't work on WASM
     let level_data: LevelData = serde_json::from_reader(level_file).unwrap();
 
     platform_events.send_batch(

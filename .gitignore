@@ -15,3 +15,6 @@ target/
 
 .DS_Store
 game_data.bin
+wasm/bevy_jam_2023*
+wasm/assets/
+wasm/levels/
