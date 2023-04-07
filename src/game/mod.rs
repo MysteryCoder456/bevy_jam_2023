@@ -2,6 +2,7 @@ use bevy::{
     prelude::*,
     sprite::collide_aabb::{collide, Collision},
 };
+use floating_label::{FloatingLabelPlugin, SpawnFloatingLabelEvent};
 use pill::{PillPlugin, SpawnPillEvent};
 use platform::{PlatformPlugin, SpawnPlatformEvent};
 use player::PlayerPlugin;
@@ -12,6 +13,7 @@ use crate::{
     GameData, GameState, UIAssets,
 };
 
+mod floating_label;
 mod pill;
 mod platform;
 mod player;
@@ -24,6 +26,7 @@ const GRAVITY: f32 = 50.;
 struct LevelData {
     platforms: Vec<Vec2>,
     pills: Vec<Vec2>,
+    labels: Vec<(String, Vec2)>,
 }
 
 #[derive(Component)]
@@ -39,6 +42,7 @@ impl Plugin for GamePlugin {
         app.add_plugin(PlayerPlugin)
             .add_plugin(PlatformPlugin)
             .add_plugin(PillPlugin)
+            .add_plugin(FloatingLabelPlugin)
             .add_systems((spawn_world, spawn_hud).in_schedule(OnEnter(GameState::Level)))
             .add_systems(
                 (gravity_system, velocity_system, collision_system)
@@ -53,6 +57,7 @@ impl Plugin for GamePlugin {
 fn spawn_world(
     mut platform_events: EventWriter<SpawnPlatformEvent>,
     mut pill_events: EventWriter<SpawnPillEvent>,
+    mut label_events: EventWriter<SpawnFloatingLabelEvent>,
     game_data: Res<GameData>,
 ) {
     let filepath = format!("levels/level{}.json", game_data.current_level);
@@ -65,7 +70,15 @@ fn spawn_world(
             .iter()
             .map(|pos| SpawnPlatformEvent(*pos)),
     );
+
     pill_events.send_batch(level_data.pills.iter().map(|pos| SpawnPillEvent(*pos)));
+
+    label_events.send_batch(
+        level_data
+            .labels
+            .iter()
+            .map(|(text, pos)| SpawnFloatingLabelEvent(text.clone(), *pos)),
+    );
 }
 
 fn spawn_hud(mut commands: Commands, ui_assets: Res<UIAssets>) {

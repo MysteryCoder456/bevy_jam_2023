@@ -4,5 +4,15 @@
     [189.0, -200.0],
     [378.0, -200.0]
   ],
-  "pills": [[189.0, -128.0]]
+  "pills": [[189.0, -128.0]],
+  "labels": [
+    ["W to Jump\nA and D to Move", [-20.0, 55.0]],
+    [
+      "Collect all pills around the map and reach\nyour patient before they expire!",
+      [320.0, 55.0]
+    ]
+  ],
+  "time_limit": 60,
+  "pill_goal": 1,
+  "goal": [378.0, -128.0]
 }
