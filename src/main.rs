@@ -107,7 +107,7 @@ fn setup_assets(
 
     let player_run_texture: Handle<Image> = asset_server.load("player/player_run.png");
     let player_run_atlas =
-        TextureAtlas::from_grid(player_run_texture, Vec2::new(32., 32.), 6, 1, None, None);
+        TextureAtlas::from_grid(player_run_texture, Vec2::new(32., 32.), 5, 1, None, None);
     let player_run = texture_atlases.add(player_run_atlas);
 
     let pill_texture: Handle<Image> = asset_server.load("pill/pill.png");
