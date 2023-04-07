@@ -1,6 +1,6 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::collide_aabb::collide};
 
-use super::{platform::SpawnPlatformEvent, SPRITE_SCALE};
+use super::{pill::Pill, platform::SpawnPlatformEvent, SPRITE_SCALE};
 use crate::{
     components::{Gravity, RectCollisionShape, Velocity},
     GameAssets, GameState, MainCamera,
@@ -10,10 +10,11 @@ const ANIMATION_SPEED: f32 = 16.; // frames per second
 const RUN_SPEED: f32 = 350.;
 const JUMP_SPEED: f32 = 1000.;
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
 struct Player {
     animation_timer: Timer,
     animation_length: usize,
+    medicines_collected: usize,
 }
 
 #[derive(States, Default, Clone, Debug, Hash, Eq, PartialEq)]
@@ -47,10 +48,13 @@ impl Plugin for PlayerPlugin {
                     .in_set(OnUpdate(GameState::Level)),
             )
             .add_systems(
-                (player_movement_system,)
+                (player_movement_system, player_pill_collision_system)
                     .in_set(OnUpdate(GameState::Level))
                     .in_schedule(CoreSchedule::FixedUpdate),
             );
+
+        #[cfg(feature = "inspector")]
+        app.register_type::<Player>();
     }
 }
 
@@ -70,6 +74,7 @@ fn spawn_player(mut commands: Commands, game_assets: Res<GameAssets>) {
                 TimerMode::Repeating,
             ),
             animation_length: 15,
+            medicines_collected: 0,
         },
         Velocity(Vec2::ZERO),
         Gravity(Vec2::NEG_Y),
@@ -158,6 +163,28 @@ fn camera_follow_system(
     if let Ok(mut camera_tf) = camera_query.get_single_mut() {
         if let Ok(player_tf) = player_query.get_single() {
             camera_tf.translation = player_tf.translation;
+        }
+    }
+}
+
+fn player_pill_collision_system(
+    mut commands: Commands,
+    mut player_query: Query<(&Transform, &RectCollisionShape, &mut Player)>,
+    pill_query: Query<(Entity, &Transform, &RectCollisionShape), (With<Pill>, Without<Player>)>,
+) {
+    if let Ok((player_tf, player_col, mut player)) = player_query.get_single_mut() {
+        for (pill_entity, pill_tf, pill_col) in pill_query.iter() {
+            let collision = collide(
+                player_tf.translation,
+                player_col.size,
+                pill_tf.translation,
+                pill_col.size,
+            );
+
+            if collision.is_some() {
+                player.medicines_collected += 1;
+                commands.entity(pill_entity).despawn();
+            }
         }
     }
 }
