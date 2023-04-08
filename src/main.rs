@@ -43,7 +43,7 @@ struct AudioAssets {
 
 #[derive(Resource, Encode, Decode, Reflect)]
 struct GameData {
-    current_level: u32,
+    current_level: usize,
 }
 
 impl Default for GameData {

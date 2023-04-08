@@ -1,12 +1,15 @@
 use bevy::{
+    asset::{AssetLoader, LoadedAsset},
     prelude::*,
+    reflect::TypeUuid,
     sprite::collide_aabb::{collide, Collision},
+    utils::HashMap,
 };
 use floating_label::{FloatingLabelPlugin, SpawnFloatingLabelEvent};
 use pill::{PillPlugin, SpawnPillEvent};
 use platform::{PlatformPlugin, SpawnPlatformEvent};
 use player::PlayerPlugin;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::{
     components::{Gravity, RectCollisionShape, Velocity},
@@ -21,12 +24,38 @@ mod player;
 const SPRITE_SCALE: f32 = 3.;
 const FIXED_TIMESTEP: f32 = 1. / 60.;
 const GRAVITY: f32 = 50.;
+const MAX_LEVELS: usize = 5;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Resource)]
+struct Levels(HashMap<usize, Handle<LevelData>>);
+
+#[derive(Deserialize, TypeUuid)]
+#[uuid = "2b2bea01-bf6b-475d-90d6-ccaae422666f"]
 struct LevelData {
     platforms: Vec<Vec2>,
     pills: Vec<Vec2>,
     labels: Vec<(String, Vec2)>,
+}
+
+#[derive(Default)]
+struct LevelDataLoader;
+
+impl AssetLoader for LevelDataLoader {
+    fn extensions(&self) -> &[&str] {
+        &["json"]
+    }
+
+    fn load<'a>(
+        &'a self,
+        bytes: &'a [u8],
+        load_context: &'a mut bevy::asset::LoadContext,
+    ) -> bevy::utils::BoxedFuture<'a, Result<(), bevy::asset::Error>> {
+        Box::pin(async move {
+            let data = serde_json::from_slice::<LevelData>(bytes)?;
+            load_context.set_default_asset(LoadedAsset::new(data));
+            Ok(())
+        })
+    }
 }
 
 #[derive(Component)]
@@ -43,6 +72,9 @@ impl Plugin for GamePlugin {
             .add_plugin(PlatformPlugin)
             .add_plugin(PillPlugin)
             .add_plugin(FloatingLabelPlugin)
+            .add_asset::<LevelData>()
+            .init_asset_loader::<LevelDataLoader>()
+            .add_startup_system(load_level_data)
             .add_systems((spawn_world, spawn_hud).in_schedule(OnEnter(GameState::Level)))
             .add_systems(
                 (gravity_system, velocity_system, collision_system)
@@ -54,15 +86,27 @@ impl Plugin for GamePlugin {
     }
 }
 
+fn load_level_data(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let levels = (1..=MAX_LEVELS)
+        .map(|n| {
+            let file_path = format!("levels/level{}.json", n);
+            (n, asset_server.load(file_path))
+        })
+        .collect();
+
+    commands.insert_resource(Levels(levels));
+}
+
 fn spawn_world(
     mut platform_events: EventWriter<SpawnPlatformEvent>,
     mut pill_events: EventWriter<SpawnPillEvent>,
     mut label_events: EventWriter<SpawnFloatingLabelEvent>,
     game_data: Res<GameData>,
+    level_assets: Res<Assets<LevelData>>,
+    levels: Res<Levels>,
 ) {
-    let filepath = format!("levels/level{}.json", game_data.current_level);
-    let level_file = std::fs::File::open(filepath).unwrap(); // FIXME: doesn't work on WASM
-    let level_data: LevelData = serde_json::from_reader(level_file).unwrap();
+    let level_handle = levels.0.get(&game_data.current_level).unwrap();
+    let level_data = level_assets.get(&level_handle).unwrap();
 
     platform_events.send_batch(
         level_data
