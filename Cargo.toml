@@ -42,3 +42,6 @@ features = [
 
 [features]
 inspector = ["dep:bevy-inspector-egui"]
+
+[profile.release]
+lto = "thin"
