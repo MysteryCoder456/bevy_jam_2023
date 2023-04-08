@@ -1,4 +1,5 @@
 use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
+use bevy_kira_audio::prelude::*;
 use bincode::{Decode, Encode};
 use game::GamePlugin;
 use main_menu::MainMenuPlugin;
@@ -35,6 +36,11 @@ struct GameAssets {
     pill: Handle<TextureAtlas>,
 }
 
+#[derive(Resource)]
+struct AudioAssets {
+    bg_music: Handle<bevy_kira_audio::AudioSource>,
+}
+
 #[derive(Resource, Encode, Decode, Reflect)]
 struct GameData {
     current_level: u32,
@@ -61,6 +67,7 @@ fn main() {
             })
             .set(ImagePlugin::default_nearest()),
     )
+    .add_plugin(AudioPlugin)
     .add_state::<GameState>()
     .add_plugin(MainMenuPlugin)
     .add_plugin(GamePlugin)
@@ -121,8 +128,13 @@ fn setup_assets(
         pill,
     };
 
+    let audio_assets = AudioAssets {
+        bg_music: asset_server.load("music/OST/OST.wav"),
+    };
+
     commands.insert_resource(ui_assets);
     commands.insert_resource(game_assets);
+    commands.insert_resource(audio_assets);
 }
 
 fn setup_game_data(mut commands: Commands) {

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
+use bevy_kira_audio::prelude::*;
 
-use crate::{GameState, UIAssets};
+use crate::{AudioAssets, GameState, UIAssets};
 
 #[derive(Component)]
 struct MainMenu;
@@ -23,7 +24,16 @@ impl Plugin for MainMenuPlugin {
     }
 }
 
-fn spawn_main_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
+fn spawn_main_menu(
+    mut commands: Commands,
+    audio: Res<bevy_kira_audio::Audio>,
+    ui_assets: Res<UIAssets>,
+    audio_assets: Res<AudioAssets>,
+) {
+    // Plays the background music on repeat
+    audio.play(audio_assets.bg_music.clone()).looped();
+
+    // Spawn in the main menu bundles
     commands
         .spawn((
             NodeBundle {
