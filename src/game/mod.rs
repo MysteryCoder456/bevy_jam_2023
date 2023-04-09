@@ -35,6 +35,9 @@ struct LevelData {
     platforms: Vec<Vec2>,
     pills: Vec<Vec2>,
     labels: Vec<(String, Vec2)>,
+    time_limit: u32,
+    pill_goal: u32,
+    goal: Vec2,
 }
 
 #[derive(Default)]
@@ -63,6 +66,9 @@ struct HUD;
 
 #[derive(Component)]
 struct CollectedLabel;
+
+#[derive(Component)]
+struct TimerLabel;
 
 pub struct GamePlugin;
 
@@ -125,7 +131,16 @@ fn spawn_world(
     );
 }
 
-fn spawn_hud(mut commands: Commands, ui_assets: Res<UIAssets>) {
+fn spawn_hud(
+    mut commands: Commands,
+    ui_assets: Res<UIAssets>,
+    game_data: Res<GameData>,
+    level_assets: Res<Assets<LevelData>>,
+    levels: Res<Levels>,
+) {
+    let level_handle = levels.0.get(&game_data.current_level).unwrap();
+    let level_data = level_assets.get(&level_handle).unwrap();
+
     commands
         .spawn((
             NodeBundle {
@@ -145,7 +160,7 @@ fn spawn_hud(mut commands: Commands, ui_assets: Res<UIAssets>) {
                 style: Style {
                     size: Size::new(Val::Percent(100.), Val::Auto),
                     flex_direction: FlexDirection::Row,
-                    justify_content: JustifyContent::FlexEnd,
+                    justify_content: JustifyContent::SpaceBetween,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -161,8 +176,18 @@ fn spawn_hud(mut commands: Commands, ui_assets: Res<UIAssets>) {
                     TextBundle::from_sections([
                         TextSection::new("Collected: ", style.clone()),
                         TextSection::new("0", style.clone()),
+                        TextSection::new(format!("/{}", level_data.pill_goal), style.clone()),
                     ]),
                     CollectedLabel,
+                ));
+
+                top_row.spawn((
+                    TextBundle::from_sections([
+                        TextSection::new("Time Left: ", style.clone()),
+                        TextSection::new(level_data.time_limit.to_string(), style.clone()),
+                        TextSection::new("s", style.clone()),
+                    ]),
+                    TimerLabel,
                 ));
             });
         });
