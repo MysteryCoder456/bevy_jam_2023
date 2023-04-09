@@ -127,12 +127,11 @@ fn player_atlas_change_system(
     )>,
 ) {
     if let Ok((mut atlas, mut sprite, mut player)) = query.get_single_mut() {
-        // FIXME: change the atlases for jumping and falling once the assets are made
         let new_atlas = match player_state.0 {
             PlayerState::Idle => game_assets.player_idle.clone(),
             PlayerState::Running => game_assets.player_run.clone(),
-            PlayerState::Jumping => game_assets.player_run.clone(),
-            PlayerState::Falling => game_assets.player_run.clone(),
+            PlayerState::Jumping => game_assets.player_jump.clone(),
+            PlayerState::Falling => game_assets.player_fall.clone(),
         };
 
         if *atlas != new_atlas {

@@ -32,6 +32,8 @@ struct UIAssets {
 struct GameAssets {
     player_idle: Handle<TextureAtlas>,
     player_run: Handle<TextureAtlas>,
+    player_jump: Handle<TextureAtlas>,
+    player_fall: Handle<TextureAtlas>,
     platform: Handle<Image>,
     pill: Handle<TextureAtlas>,
 }
@@ -117,6 +119,16 @@ fn setup_assets(
         TextureAtlas::from_grid(player_run_texture, Vec2::new(32., 32.), 5, 1, None, None);
     let player_run = texture_atlases.add(player_run_atlas);
 
+    let player_jump_texture: Handle<Image> = asset_server.load("player/player_jump.png");
+    let player_jump_atlas =
+        TextureAtlas::from_grid(player_jump_texture, Vec2::new(32., 32.), 5, 1, None, None);
+    let player_jump = texture_atlases.add(player_jump_atlas);
+
+    let player_fall_texture: Handle<Image> = asset_server.load("player/player_fall.png");
+    let player_fall_atlas =
+        TextureAtlas::from_grid(player_fall_texture, Vec2::new(32., 32.), 3, 1, None, None);
+    let player_fall = texture_atlases.add(player_fall_atlas);
+
     let pill_texture: Handle<Image> = asset_server.load("pill/pill.png");
     let pill_atlas = TextureAtlas::from_grid(pill_texture, Vec2::new(32., 32.), 45, 1, None, None);
     let pill = texture_atlases.add(pill_atlas);
@@ -124,6 +136,8 @@ fn setup_assets(
     let game_assets = GameAssets {
         player_idle,
         player_run,
+        player_jump,
+        player_fall,
         platform: asset_server.load("platform/platform.png"),
         pill,
     };
