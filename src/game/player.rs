@@ -1,9 +1,10 @@
 use bevy::{prelude::*, sprite::collide_aabb::collide};
+use bevy_kira_audio::prelude::*;
 
 use super::{pill::Pill, platform::SpawnPlatformEvent, CollectedLabel, SPRITE_SCALE};
 use crate::{
     components::{Gravity, RectCollisionShape, Velocity},
-    GameAssets, GameState, MainCamera,
+    AudioAssets, GameAssets, GameState, MainCamera, SFXChannel,
 };
 
 const ANIMATION_SPEED: f32 = 16.; // frames per second
@@ -196,6 +197,8 @@ fn player_pill_collision_system(
 fn player_movement_system(
     kb: Res<Input<KeyCode>>,
     player_state: Res<State<PlayerState>>,
+    sfx: Res<AudioChannel<SFXChannel>>,
+    audio_assets: Res<AudioAssets>,
     mut query: Query<(&mut Velocity, &mut TextureAtlasSprite), With<Player>>,
 ) {
     if let Ok((mut velocity, mut sprite)) = query.get_single_mut() {
@@ -211,7 +214,10 @@ fn player_movement_system(
 
         if kb.just_pressed(KeyCode::W) {
             match player_state.0 {
-                PlayerState::Idle | PlayerState::Running => velocity.0.y = JUMP_SPEED,
+                PlayerState::Idle | PlayerState::Running => {
+                    velocity.0.y = JUMP_SPEED;
+                    sfx.play(audio_assets.player_jump.clone());
+                }
                 _ => {}
             }
         }

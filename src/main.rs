@@ -41,6 +41,7 @@ struct GameAssets {
 #[derive(Resource)]
 struct AudioAssets {
     bg_music: Handle<bevy_kira_audio::AudioSource>,
+    player_jump: Handle<bevy_kira_audio::AudioSource>,
 }
 
 #[derive(Resource, Encode, Decode, Reflect)]
@@ -53,6 +54,12 @@ impl Default for GameData {
         Self { current_level: 1 }
     }
 }
+
+#[derive(Resource)]
+struct BackgroundMusicChannel;
+
+#[derive(Resource)]
+struct SFXChannel;
 
 fn main() {
     let mut app = App::new();
@@ -70,10 +77,17 @@ fn main() {
             .set(ImagePlugin::default_nearest()),
     )
     .add_plugin(AudioPlugin)
+    .add_audio_channel::<BackgroundMusicChannel>()
+    .add_audio_channel::<SFXChannel>()
     .add_state::<GameState>()
     .add_plugin(MainMenuPlugin)
     .add_plugin(GamePlugin)
-    .add_startup_systems((setup_camera, setup_assets, setup_game_data));
+    .add_startup_systems((
+        setup_camera,
+        setup_assets,
+        setup_game_data,
+        setup_audio_channels,
+    ));
 
     #[cfg(feature = "inspector")]
     app.add_plugin(WorldInspectorPlugin::new())
@@ -144,6 +158,7 @@ fn setup_assets(
 
     let audio_assets = AudioAssets {
         bg_music: asset_server.load("music/OST/OST.wav"),
+        player_jump: asset_server.load("sounds/jump/jump.wav"),
     };
 
     commands.insert_resource(ui_assets);
@@ -165,4 +180,12 @@ fn setup_game_data(mut commands: Commands) {
     };
 
     commands.insert_resource(game_data);
+}
+
+fn setup_audio_channels(
+    bgm: Res<AudioChannel<BackgroundMusicChannel>>,
+    sfx: Res<AudioChannel<SFXChannel>>,
+) {
+    bgm.set_volume(0.7);
+    sfx.set_volume(1.0);
 }
