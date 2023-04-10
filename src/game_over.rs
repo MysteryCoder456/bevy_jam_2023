@@ -12,7 +12,9 @@ pub struct GameOverPlugin;
 
 impl Plugin for GameOverPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(spawn_game_over_menu.in_schedule(OnEnter(GameState::GameOver)));
+        app.add_system(spawn_game_over_menu.in_schedule(OnEnter(GameState::GameOver)))
+            .add_system(despawn_game_over_menu.in_schedule(OnExit(GameState::GameOver)))
+            .add_system(try_again_system.in_set(OnUpdate(GameState::GameOver)));
     }
 }
 
@@ -71,4 +73,22 @@ fn spawn_game_over_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
                 ));
             });
         });
+}
+
+fn despawn_game_over_menu(mut commands: Commands, query: Query<Entity, With<GameOverMenu>>) {
+    if let Ok(entity) = query.get_single() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+fn try_again_system(
+    mut game_state: ResMut<NextState<GameState>>,
+    query: Query<&Interaction, (With<TryAgainButton>, Changed<Interaction>)>,
+) {
+    if let Ok(interaction) = query.get_single() {
+        match *interaction {
+            Interaction::Clicked => game_state.set(GameState::Level),
+            _ => {}
+        }
+    }
 }
