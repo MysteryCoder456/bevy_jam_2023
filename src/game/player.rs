@@ -46,6 +46,7 @@ impl Plugin for PlayerPlugin {
                         .after(player_state_system),
                     player_animation_system.after(player_atlas_change_system),
                     camera_follow_system,
+                    player_out_of_bounds_system,
                 )
                     .in_set(OnUpdate(GameState::Level)),
             )
@@ -239,6 +240,17 @@ fn player_movement_system(
                 }
                 _ => {}
             }
+        }
+    }
+}
+
+fn player_out_of_bounds_system(
+    mut game_state: ResMut<NextState<GameState>>,
+    query: Query<&Transform, With<Player>>,
+) {
+    if let Ok(player_tf) = query.get_single() {
+        if player_tf.translation.y < -10000. {
+            game_state.set(GameState::GameOver);
         }
     }
 }
