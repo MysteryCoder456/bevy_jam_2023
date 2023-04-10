@@ -12,11 +12,13 @@ pub struct PlatformPlugin;
 
 impl Plugin for PlatformPlugin {
     fn build(&self, app: &mut App) {
-        app.add_event::<SpawnPlatformEvent>().add_system(
-            spawn_platform
-                .in_set(OnUpdate(GameState::Level))
-                .run_if(on_event::<SpawnPlatformEvent>()),
-        );
+        app.add_event::<SpawnPlatformEvent>()
+            .add_system(
+                spawn_platform
+                    .in_set(OnUpdate(GameState::Level))
+                    .run_if(on_event::<SpawnPlatformEvent>()),
+            )
+            .add_system(despawn_platforms.in_schedule(OnExit(GameState::Level)));
     }
 }
 
@@ -42,5 +44,11 @@ fn spawn_platform(
                 collide: true,
             },
         ));
+    }
+}
+
+fn despawn_platforms(mut commands: Commands, query: Query<Entity, With<Platform>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn();
     }
 }

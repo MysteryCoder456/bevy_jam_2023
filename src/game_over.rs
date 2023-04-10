@@ -1,36 +1,22 @@
 use bevy::prelude::*;
-use bevy_kira_audio::prelude::*;
 
-use crate::{AudioAssets, BackgroundMusicChannel, GameState, UIAssets};
-
-#[derive(Component)]
-struct MainMenu;
+use crate::{GameState, UIAssets};
 
 #[derive(Component)]
-enum ButtonType {
-    Play,
-}
+struct GameOverMenu;
 
-pub struct MainMenuPlugin;
+#[derive(Component)]
+struct TryAgainButton;
 
-impl Plugin for MainMenuPlugin {
+pub struct GameOverPlugin;
+
+impl Plugin for GameOverPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(spawn_main_menu.in_schedule(OnEnter(GameState::MainMenu)))
-            .add_system(despawn_main_menu.in_schedule(OnExit(GameState::MainMenu)))
-            .add_system(button_action_system.in_set(OnUpdate(GameState::MainMenu)));
+        app.add_system(spawn_game_over_menu.in_schedule(OnEnter(GameState::GameOver)));
     }
 }
 
-fn spawn_main_menu(
-    mut commands: Commands,
-    bgm: Res<AudioChannel<BackgroundMusicChannel>>,
-    ui_assets: Res<UIAssets>,
-    audio_assets: Res<AudioAssets>,
-) {
-    // Plays the background music on repeat
-    bgm.play(audio_assets.bg_music.clone()).looped();
-
-    // Spawn in the main menu bundles
+fn spawn_game_over_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
     commands
         .spawn((
             NodeBundle {
@@ -43,17 +29,18 @@ fn spawn_main_menu(
                     align_items: AlignItems::Center,
                     ..Default::default()
                 },
+                background_color: BackgroundColor(Color::BLACK),
                 ..Default::default()
             },
-            MainMenu,
+            GameOverMenu,
         ))
         .with_children(|n| {
             n.spawn(TextBundle::from_section(
-                "EXPIRY DATE",
+                "Game Over :(",
                 TextStyle {
                     font: ui_assets.font.clone(),
-                    font_size: 60.,
-                    color: Color::BLACK,
+                    font_size: 50.,
+                    color: Color::WHITE,
                 },
             ));
 
@@ -71,11 +58,11 @@ fn spawn_main_menu(
                     },
                     ..Default::default()
                 },
-                ButtonType::Play,
+                TryAgainButton,
             ))
             .with_children(|b| {
                 b.spawn(TextBundle::from_section(
-                    "Play",
+                    "Try Again?",
                     TextStyle {
                         font: ui_assets.font.clone(),
                         font_size: 38.,
@@ -84,26 +71,4 @@ fn spawn_main_menu(
                 ));
             });
         });
-}
-
-fn despawn_main_menu(mut commands: Commands, query: Query<Entity, With<MainMenu>>) {
-    if let Ok(entity) = query.get_single() {
-        commands.entity(entity).despawn_recursive();
-    }
-}
-
-fn button_action_system(
-    mut state: ResMut<NextState<GameState>>,
-    query: Query<(&ButtonType, &Interaction), Changed<Interaction>>,
-) {
-    for (btn, interaction) in query.iter() {
-        if *interaction != Interaction::Clicked {
-            continue;
-        }
-
-        // TODO: Add fade effect when transitioning states
-        match *btn {
-            ButtonType::Play => state.set(GameState::Level),
-        }
-    }
 }

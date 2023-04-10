@@ -37,6 +37,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<PlayerState>()
             .add_system(spawn_player.in_schedule(OnEnter(GameState::Level)))
+            .add_system(despawn_player.in_schedule(OnExit(GameState::Level)))
             .add_systems(
                 (
                     player_state_system,
@@ -87,6 +88,12 @@ fn spawn_player(mut commands: Commands, game_assets: Res<GameAssets>) {
             collide: true,
         },
     ));
+}
+
+fn despawn_player(mut commands: Commands, query: Query<Entity, With<Player>>) {
+    if let Ok(entity) = query.get_single() {
+        commands.entity(entity).despawn();
+    }
 }
 
 /// Used for debugging only.

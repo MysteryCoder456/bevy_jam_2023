@@ -82,6 +82,7 @@ impl Plugin for GamePlugin {
             .init_asset_loader::<LevelDataLoader>()
             .add_startup_system(load_level_data)
             .add_systems((spawn_world, spawn_hud).in_schedule(OnEnter(GameState::Level)))
+            .add_system(despawn_hud.in_schedule(OnExit(GameState::Level)))
             .add_systems(
                 (gravity_system, velocity_system, collision_system)
                     .chain()
@@ -197,10 +198,24 @@ fn spawn_hud(
         });
 }
 
-fn stopwatch_system(time: Res<Time>, mut query: Query<(&mut Text, &mut StopwatchLabel)>) {
+fn despawn_hud(mut commands: Commands, query: Query<Entity, With<HUD>>) {
+    if let Ok(entity) = query.get_single() {
+        commands.entity(entity).despawn_recursive();
+    }
+}
+
+fn stopwatch_system(
+    time: Res<Time>,
+    mut game_state: ResMut<NextState<GameState>>,
+    mut query: Query<(&mut Text, &mut StopwatchLabel)>,
+) {
     if let Ok((mut text, mut stopwatch)) = query.get_single_mut() {
         stopwatch.0.tick(time.delta());
         text.sections[1].value = stopwatch.0.remaining().as_secs().to_string();
+
+        if stopwatch.0.finished() {
+            game_state.set(GameState::GameOver);
+        }
     }
 }
 

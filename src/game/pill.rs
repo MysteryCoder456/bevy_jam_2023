@@ -23,6 +23,7 @@ impl Plugin for PillPlugin {
                     .in_set(OnUpdate(GameState::Level))
                     .run_if(on_event::<SpawnPillEvent>()),
             )
+            .add_system(despawn_pills.in_schedule(OnExit(GameState::Level)))
             .add_system(pill_animation_system.in_set(OnUpdate(GameState::Level)));
     }
 }
@@ -55,6 +56,12 @@ fn spawn_pill(
                 collide: false,
             },
         ));
+    }
+}
+
+fn despawn_pills(mut commands: Commands, query: Query<Entity, With<Pill>>) {
+    for entity in query.iter() {
+        commands.entity(entity).despawn();
     }
 }
 

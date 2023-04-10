@@ -2,6 +2,7 @@ use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
 use bevy_kira_audio::prelude::*;
 use bincode::{Decode, Encode};
 use game::GamePlugin;
+use game_over::GameOverPlugin;
 use main_menu::MainMenuPlugin;
 
 #[cfg(feature = "inspector")]
@@ -9,6 +10,7 @@ use bevy_inspector_egui::quick::{ResourceInspectorPlugin, WorldInspectorPlugin};
 
 mod components;
 mod game;
+mod game_over;
 mod main_menu;
 
 #[derive(Component)]
@@ -19,6 +21,7 @@ enum GameState {
     #[default]
     MainMenu,
     Level,
+    GameOver,
 }
 
 #[derive(Resource)]
@@ -82,12 +85,14 @@ fn main() {
     .add_state::<GameState>()
     .add_plugin(MainMenuPlugin)
     .add_plugin(GamePlugin)
+    .add_plugin(GameOverPlugin)
     .add_startup_systems((
         setup_camera,
         setup_assets,
         setup_game_data,
         setup_audio_channels,
-    ));
+    ))
+    .add_system(button_appearance_system);
 
     #[cfg(feature = "inspector")]
     app.add_plugin(WorldInspectorPlugin::new())
@@ -188,4 +193,18 @@ fn setup_audio_channels(
 ) {
     bgm.set_volume(0.7);
     sfx.set_volume(1.0);
+}
+
+fn button_appearance_system(
+    mut query: Query<(&mut UiImage, &Interaction), (With<Button>, Changed<Interaction>)>,
+    ui_assets: Res<UIAssets>,
+) {
+    for (mut ui_image, interaction) in query.iter_mut() {
+        let new_image = match *interaction {
+            Interaction::Clicked | Interaction::Hovered => ui_assets.button_pressed.clone(),
+            _ => ui_assets.button.clone(),
+        };
+
+        *ui_image = UiImage::new(new_image);
+    }
 }
