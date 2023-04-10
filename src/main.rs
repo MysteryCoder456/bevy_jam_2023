@@ -39,6 +39,7 @@ struct GameAssets {
     player_fall: Handle<TextureAtlas>,
     platform: Handle<Image>,
     pill: Handle<TextureAtlas>,
+    patient: Handle<TextureAtlas>,
 }
 
 #[derive(Resource)]
@@ -152,6 +153,11 @@ fn setup_assets(
     let pill_atlas = TextureAtlas::from_grid(pill_texture, Vec2::new(32., 32.), 45, 1, None, None);
     let pill = texture_atlases.add(pill_atlas);
 
+    let patient_texture: Handle<Image> = asset_server.load("patient/patient.png");
+    let patient_atlas =
+        TextureAtlas::from_grid(patient_texture, Vec2::new(32., 32.), 4, 1, None, None);
+    let patient = texture_atlases.add(patient_atlas);
+
     let game_assets = GameAssets {
         player_idle,
         player_run,
@@ -159,6 +165,7 @@ fn setup_assets(
         player_fall,
         platform: asset_server.load("platform/platform.png"),
         pill,
+        patient,
     };
 
     let audio_assets = AudioAssets {

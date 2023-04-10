@@ -6,6 +6,7 @@ use bevy::{
     utils::HashMap,
 };
 use floating_label::{FloatingLabelPlugin, SpawnFloatingLabelEvent};
+use patient::{PatientPlugin, SpawnPatientEvent};
 use pill::{PillPlugin, SpawnPillEvent};
 use platform::{PlatformPlugin, SpawnPlatformEvent};
 use player::PlayerPlugin;
@@ -17,6 +18,7 @@ use crate::{
 };
 
 mod floating_label;
+mod patient;
 mod pill;
 mod platform;
 mod player;
@@ -78,6 +80,7 @@ impl Plugin for GamePlugin {
             .add_plugin(PlatformPlugin)
             .add_plugin(PillPlugin)
             .add_plugin(FloatingLabelPlugin)
+            .add_plugin(PatientPlugin)
             .add_asset::<LevelData>()
             .init_asset_loader::<LevelDataLoader>()
             .add_startup_system(load_level_data)
@@ -109,6 +112,7 @@ fn spawn_world(
     mut platform_events: EventWriter<SpawnPlatformEvent>,
     mut pill_events: EventWriter<SpawnPillEvent>,
     mut label_events: EventWriter<SpawnFloatingLabelEvent>,
+    mut patient_events: EventWriter<SpawnPatientEvent>,
     game_data: Res<GameData>,
     level_assets: Res<Assets<LevelData>>,
     levels: Res<Levels>,
@@ -131,6 +135,8 @@ fn spawn_world(
             .iter()
             .map(|(text, pos)| SpawnFloatingLabelEvent(text.clone(), *pos)),
     );
+
+    patient_events.send(SpawnPatientEvent(level_data.goal));
 }
 
 fn spawn_hud(
