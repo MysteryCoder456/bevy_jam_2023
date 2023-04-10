@@ -35,7 +35,7 @@ struct LevelData {
     platforms: Vec<Vec2>,
     pills: Vec<Vec2>,
     labels: Vec<(String, Vec2)>,
-    time_limit: u32,
+    time_limit: u64,
     pill_goal: u32,
     goal: Vec2,
 }
@@ -68,7 +68,7 @@ struct HUD;
 struct CollectedLabel;
 
 #[derive(Component)]
-struct TimerLabel;
+struct StopwatchLabel(Timer);
 
 pub struct GamePlugin;
 
@@ -88,6 +88,7 @@ impl Plugin for GamePlugin {
                     .in_set(OnUpdate(GameState::Level))
                     .in_schedule(CoreSchedule::FixedUpdate),
             )
+            .add_system(stopwatch_system.in_set(OnUpdate(GameState::Level)))
             .insert_resource(FixedTime::new_from_secs(FIXED_TIMESTEP));
     }
 }
@@ -187,10 +188,20 @@ fn spawn_hud(
                         TextSection::new(level_data.time_limit.to_string(), style.clone()),
                         TextSection::new("s", style.clone()),
                     ]),
-                    TimerLabel,
+                    StopwatchLabel(Timer::new(
+                        std::time::Duration::from_secs(level_data.time_limit),
+                        TimerMode::Once,
+                    )),
                 ));
             });
         });
+}
+
+fn stopwatch_system(time: Res<Time>, mut query: Query<(&mut Text, &mut StopwatchLabel)>) {
+    if let Ok((mut text, mut stopwatch)) = query.get_single_mut() {
+        stopwatch.0.tick(time.delta());
+        text.sections[1].value = stopwatch.0.remaining().as_secs().to_string();
+    }
 }
 
 fn velocity_system(time: Res<FixedTime>, mut query: Query<(&mut Transform, &Velocity)>) {

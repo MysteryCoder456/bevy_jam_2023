@@ -31,7 +31,7 @@ fn spawn_main_menu(
     audio_assets: Res<AudioAssets>,
 ) {
     // Plays the background music on repeat
-    bgm.play(audio_assets.bg_music.clone()).looped();
+    //bgm.play(audio_assets.bg_music.clone()).looped();
 
     // Spawn in the main menu bundles
     commands
