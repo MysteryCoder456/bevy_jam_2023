@@ -22,6 +22,7 @@ enum GameState {
     MainMenu,
     Level,
     GameOver,
+    LevelCompleted,
 }
 
 #[derive(Resource)]
@@ -93,6 +94,7 @@ fn main() {
         setup_game_data,
         setup_audio_channels,
     ))
+    .add_system(next_level_system.in_schedule(OnEnter(GameState::LevelCompleted)))
     .add_system(button_appearance_system);
 
     #[cfg(feature = "inspector")]
@@ -200,6 +202,14 @@ fn setup_audio_channels(
 ) {
     bgm.set_volume(0.7);
     sfx.set_volume(1.0);
+}
+
+fn next_level_system(
+    mut game_state: ResMut<NextState<GameState>>,
+    mut game_data: ResMut<GameData>,
+) {
+    game_data.current_level += 1;
+    game_state.set(GameState::Level);
 }
 
 fn button_appearance_system(

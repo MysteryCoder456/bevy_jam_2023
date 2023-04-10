@@ -2,13 +2,14 @@ use bevy::{prelude::*, sprite::collide_aabb::collide};
 use bevy_kira_audio::prelude::*;
 
 use super::{
+    patient::Patient,
     pill::{Pill, SpawnPillEvent},
     platform::SpawnPlatformEvent,
-    CollectedLabel, SPRITE_SCALE,
+    CollectedLabel, LevelData, Levels, SPRITE_SCALE,
 };
 use crate::{
     components::{Gravity, RectCollisionShape, Velocity},
-    AudioAssets, GameAssets, GameState, MainCamera, SFXChannel,
+    AudioAssets, GameAssets, GameData, GameState, MainCamera, SFXChannel,
 };
 
 const ANIMATION_SPEED: f32 = 16.; // frames per second
@@ -19,7 +20,7 @@ const JUMP_SPEED: f32 = 1000.;
 struct Player {
     animation_timer: Timer,
     animation_length: usize,
-    medicines_collected: usize,
+    medicines_collected: u32,
 }
 
 #[derive(States, Default, Clone, Debug, Hash, Eq, PartialEq)]
@@ -51,7 +52,11 @@ impl Plugin for PlayerPlugin {
                     .in_set(OnUpdate(GameState::Level)),
             )
             .add_systems(
-                (player_movement_system, player_pill_collision_system)
+                (
+                    player_movement_system,
+                    player_pill_collision_system,
+                    player_patient_collision_system,
+                )
                     .in_set(OnUpdate(GameState::Level))
                     .in_schedule(CoreSchedule::FixedUpdate),
             );
@@ -208,6 +213,35 @@ fn player_pill_collision_system(
 
                 if let Ok(mut text) = label_query.get_single_mut() {
                     text.sections[1].value = player.medicines_collected.to_string();
+                }
+            }
+        }
+    }
+}
+
+fn player_patient_collision_system(
+    mut game_state: ResMut<NextState<GameState>>,
+    level_assets: Res<Assets<LevelData>>,
+    levels: Res<Levels>,
+    game_data: Res<GameData>,
+    player_query: Query<(&Transform, &RectCollisionShape, &Player)>,
+    patient_query: Query<(&Transform, &RectCollisionShape), (With<Patient>, Without<Player>)>,
+) {
+    if let Ok((player_tf, player_col, player)) = player_query.get_single() {
+        if let Ok((patient_tf, patient_col)) = patient_query.get_single() {
+            let collision = collide(
+                player_tf.translation,
+                player_col.size,
+                patient_tf.translation,
+                patient_col.size,
+            );
+
+            if collision.is_some() {
+                let level_handle = levels.0.get(&game_data.current_level).unwrap();
+                let level_data = level_assets.get(&level_handle).unwrap();
+
+                if player.medicines_collected == level_data.pill_goal {
+                    game_state.set(GameState::LevelCompleted);
                 }
             }
         }
