@@ -1,7 +1,11 @@
 use bevy::{prelude::*, sprite::collide_aabb::collide};
 use bevy_kira_audio::prelude::*;
 
-use super::{pill::Pill, platform::SpawnPlatformEvent, CollectedLabel, SPRITE_SCALE};
+use super::{
+    pill::{Pill, SpawnPillEvent},
+    platform::SpawnPlatformEvent,
+    CollectedLabel, SPRITE_SCALE,
+};
 use crate::{
     components::{Gravity, RectCollisionShape, Velocity},
     AudioAssets, GameAssets, GameState, MainCamera, SFXChannel,
@@ -41,10 +45,6 @@ impl Plugin for PlayerPlugin {
                         .after(player_state_system),
                     player_animation_system.after(player_atlas_change_system),
                     camera_follow_system,
-                    // TODO: Remove this once levels have been made
-                    spawn_platform_below_player.run_if(
-                        bevy::input::common_conditions::input_just_pressed(KeyCode::Equals),
-                    ),
                 )
                     .in_set(OnUpdate(GameState::Level)),
             )
@@ -53,6 +53,9 @@ impl Plugin for PlayerPlugin {
                     .in_set(OnUpdate(GameState::Level))
                     .in_schedule(CoreSchedule::FixedUpdate),
             );
+
+        #[cfg(debug_assertions)]
+        app.add_system(spawn_game_entity.in_set(OnUpdate(GameState::Level)));
 
         #[cfg(feature = "inspector")]
         app.register_type::<Player>();
@@ -86,15 +89,24 @@ fn spawn_player(mut commands: Commands, game_assets: Res<GameAssets>) {
     ));
 }
 
-/// Used for debugging only. Must be removed in production.
-fn spawn_platform_below_player(
-    mut events: EventWriter<SpawnPlatformEvent>,
+/// Used for debugging only.
+#[cfg(debug_assertions)]
+fn spawn_game_entity(
+    kb: Res<Input<KeyCode>>,
     query: Query<&Transform, With<Player>>,
+    mut platform_events: EventWriter<SpawnPlatformEvent>,
+    mut pill_events: EventWriter<SpawnPillEvent>,
 ) {
     if let Ok(player_tf) = query.get_single() {
-        events.send(SpawnPlatformEvent(
-            player_tf.translation.truncate() - Vec2::new(0., 90.),
-        ));
+        let player_pos = player_tf.translation.truncate();
+
+        if kb.just_pressed(KeyCode::P) {
+            platform_events.send(SpawnPlatformEvent(player_pos - Vec2::new(0., 90.)));
+        }
+
+        if kb.just_pressed(KeyCode::O) {
+            pill_events.send(SpawnPillEvent(player_pos + Vec2::new(50., 0.)));
+        }
     }
 }
 
