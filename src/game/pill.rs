@@ -1,16 +1,40 @@
 use bevy::prelude::*;
+use rand::distributions::{Distribution, Standard};
 
 use super::SPRITE_SCALE;
 use crate::{components::RectCollisionShape, GameAssets, GameState};
 
 const ANIMATION_SPEED: f32 = 44.; // frames per second
 
-pub struct SpawnPillEvent(pub Vec2);
+pub struct SpawnPillEvent {
+    pub position: Vec2,
+    pub side_effect: SideEffect,
+}
 
-#[derive(Component)]
+#[derive(Clone, Reflect)]
+pub enum SideEffect {
+    Shrink,
+    Enlarge,
+    Speed,
+    Slowness,
+}
+
+impl Distribution<SideEffect> for Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> SideEffect {
+        match rng.gen_range(0..4) {
+            0 => SideEffect::Shrink,
+            1 => SideEffect::Enlarge,
+            2 => SideEffect::Speed,
+            _ => SideEffect::Slowness,
+        }
+    }
+}
+
+#[derive(Component, Reflect)]
 pub struct Pill {
     animation_timer: Timer,
     animation_length: usize,
+    side_effect: SideEffect,
 }
 
 pub struct PillPlugin;
@@ -25,6 +49,9 @@ impl Plugin for PillPlugin {
             )
             .add_system(despawn_pills.in_schedule(OnExit(GameState::Level)))
             .add_system(pill_animation_system.in_set(OnUpdate(GameState::Level)));
+
+        #[cfg(feature = "inspector")]
+        app.register_type::<Pill>();
     }
 }
 
@@ -38,7 +65,7 @@ fn spawn_pill(
             SpriteSheetBundle {
                 texture_atlas: game_assets.pill.clone(),
                 transform: Transform {
-                    translation: event.0.extend(0.),
+                    translation: event.position.extend(0.),
                     scale: Vec3::ONE * SPRITE_SCALE,
                     ..Default::default()
                 },
@@ -50,6 +77,7 @@ fn spawn_pill(
                     TimerMode::Repeating,
                 ),
                 animation_length: 45,
+                side_effect: event.side_effect.clone(),
             },
             RectCollisionShape {
                 size: Vec2::new(18., 22.),

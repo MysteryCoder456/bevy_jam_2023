@@ -127,7 +127,10 @@ fn spawn_world(
             .map(|pos| SpawnPlatformEvent(*pos)),
     );
 
-    pill_events.send_batch(level_data.pills.iter().map(|pos| SpawnPillEvent(*pos)));
+    pill_events.send_batch(level_data.pills.iter().map(|pos| SpawnPillEvent {
+        position: *pos,
+        side_effect: rand::random(),
+    }));
 
     label_events.send_batch(
         level_data

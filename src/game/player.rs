@@ -118,7 +118,10 @@ fn spawn_game_entity(
         }
 
         if kb.just_pressed(KeyCode::O) {
-            pill_events.send(SpawnPillEvent(player_pos + Vec2::new(50., 0.)));
+            pill_events.send(SpawnPillEvent {
+                position: player_pos + Vec2::new(50., 0.),
+                side_effect: rand::random(),
+            });
         }
     }
 }
