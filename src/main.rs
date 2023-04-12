@@ -47,6 +47,7 @@ struct GameAssets {
 struct AudioAssets {
     bg_music: Handle<bevy_kira_audio::AudioSource>,
     player_jump: Handle<bevy_kira_audio::AudioSource>,
+    pill_collect: Handle<bevy_kira_audio::AudioSource>,
 }
 
 #[derive(Resource, Encode, Decode, Reflect)]
@@ -173,6 +174,7 @@ fn setup_assets(
     let audio_assets = AudioAssets {
         bg_music: asset_server.load("music/OST/OST.wav"),
         player_jump: asset_server.load("sounds/jump/jump.wav"),
+        pill_collect: asset_server.load("sounds/collect/collect.wav"),
     };
 
     commands.insert_resource(ui_assets);
@@ -200,7 +202,7 @@ fn setup_audio_channels(
     bgm: Res<AudioChannel<BackgroundMusicChannel>>,
     sfx: Res<AudioChannel<SFXChannel>>,
 ) {
-    bgm.set_volume(0.7);
+    bgm.set_volume(0.6);
     sfx.set_volume(1.0);
 }
 

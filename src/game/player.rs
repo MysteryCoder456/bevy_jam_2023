@@ -194,6 +194,8 @@ fn camera_follow_system(
 
 fn player_pill_collision_system(
     mut commands: Commands,
+    sfx: Res<AudioChannel<SFXChannel>>,
+    audio_assets: Res<AudioAssets>,
     mut player_query: Query<(&Transform, &RectCollisionShape, &mut Player)>,
     pill_query: Query<(Entity, &Transform, &RectCollisionShape), (With<Pill>, Without<Player>)>,
     mut label_query: Query<&mut Text, With<CollectedLabel>>,
@@ -208,6 +210,7 @@ fn player_pill_collision_system(
             );
 
             if collision.is_some() {
+                sfx.play(audio_assets.pill_collect.clone());
                 player.medicines_collected += 1;
                 commands.entity(pill_entity).despawn();
 
