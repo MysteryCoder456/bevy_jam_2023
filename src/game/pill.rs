@@ -14,17 +14,15 @@ pub struct SpawnPillEvent {
 #[derive(Clone, Reflect)]
 pub enum SideEffect {
     Shrink,
-    Enlarge,
     Speed,
     Slowness,
 }
 
 impl Distribution<SideEffect> for Standard {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> SideEffect {
-        match rng.gen_range(0..4) {
+        match rng.gen_range(0..=2) {
             0 => SideEffect::Shrink,
-            1 => SideEffect::Enlarge,
-            2 => SideEffect::Speed,
+            1 => SideEffect::Speed,
             _ => SideEffect::Slowness,
         }
     }
@@ -34,7 +32,7 @@ impl Distribution<SideEffect> for Standard {
 pub struct Pill {
     animation_timer: Timer,
     animation_length: usize,
-    side_effect: SideEffect,
+    pub side_effect: SideEffect,
 }
 
 pub struct PillPlugin;

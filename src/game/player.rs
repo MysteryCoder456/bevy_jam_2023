@@ -3,7 +3,7 @@ use bevy_kira_audio::prelude::*;
 
 use super::{
     patient::Patient,
-    pill::{Pill, SpawnPillEvent},
+    pill::{Pill, SideEffect, SpawnPillEvent},
     platform::SpawnPlatformEvent,
     CollectedLabel, LevelData, Levels, SPRITE_SCALE,
 };
@@ -16,11 +16,13 @@ const ANIMATION_SPEED: f32 = 16.; // frames per second
 const RUN_SPEED: f32 = 350.;
 const JUMP_SPEED: f32 = 1000.;
 
-#[derive(Component, Reflect)]
+#[derive(Component, Reflect, Default)]
 struct Player {
     animation_timer: Timer,
     animation_length: usize,
     medicines_collected: u32,
+    jump_multiplier: f32,
+    speed_multiplier: f32,
 }
 
 #[derive(States, Default, Clone, Debug, Hash, Eq, PartialEq)]
@@ -86,6 +88,8 @@ fn spawn_player(mut commands: Commands, game_assets: Res<GameAssets>) {
             ),
             animation_length: 15,
             medicines_collected: 0,
+            jump_multiplier: 1.,
+            speed_multiplier: 1.,
         },
         Velocity(Vec2::ZERO),
         Gravity(Vec2::NEG_Y),
@@ -199,12 +203,12 @@ fn player_pill_collision_system(
     mut commands: Commands,
     sfx: Res<AudioChannel<SFXChannel>>,
     audio_assets: Res<AudioAssets>,
-    mut player_query: Query<(&Transform, &RectCollisionShape, &mut Player)>,
-    pill_query: Query<(Entity, &Transform, &RectCollisionShape), (With<Pill>, Without<Player>)>,
+    mut player_query: Query<(&mut Transform, &mut RectCollisionShape, &mut Player)>,
+    pill_query: Query<(Entity, &Transform, &RectCollisionShape, &Pill), Without<Player>>,
     mut label_query: Query<&mut Text, With<CollectedLabel>>,
 ) {
-    if let Ok((player_tf, player_col, mut player)) = player_query.get_single_mut() {
-        for (pill_entity, pill_tf, pill_col) in pill_query.iter() {
+    if let Ok((mut player_tf, mut player_col, mut player)) = player_query.get_single_mut() {
+        for (pill_entity, pill_tf, pill_col, pill) in pill_query.iter() {
             let collision = collide(
                 player_tf.translation,
                 player_col.size,
@@ -219,6 +223,17 @@ fn player_pill_collision_system(
 
                 if let Ok(mut text) = label_query.get_single_mut() {
                     text.sections[1].value = player.medicines_collected.to_string();
+                }
+
+                match pill.side_effect {
+                    SideEffect::Shrink => {
+                        const MULTIPLIER: f32 = 0.85;
+                        player_tf.scale *= MULTIPLIER;
+                        player_col.size *= MULTIPLIER;
+                        player.jump_multiplier *= MULTIPLIER;
+                    }
+                    SideEffect::Speed => player.speed_multiplier *= 1.5,
+                    SideEffect::Slowness => player.speed_multiplier *= 0.7,
                 }
             }
         }
@@ -259,9 +274,9 @@ fn player_movement_system(
     player_state: Res<State<PlayerState>>,
     sfx: Res<AudioChannel<SFXChannel>>,
     audio_assets: Res<AudioAssets>,
-    mut query: Query<(&mut Velocity, &mut TextureAtlasSprite), With<Player>>,
+    mut query: Query<(&mut Velocity, &mut TextureAtlasSprite, &Player)>,
 ) {
-    if let Ok((mut velocity, mut sprite)) = query.get_single_mut() {
+    if let Ok((mut velocity, mut sprite, player)) = query.get_single_mut() {
         let x_direction = kb.pressed(KeyCode::D) as i32 - kb.pressed(KeyCode::A) as i32;
 
         if x_direction < 0 {
@@ -270,12 +285,12 @@ fn player_movement_system(
             sprite.flip_x = false;
         }
 
-        velocity.0.x = x_direction as f32 * RUN_SPEED;
+        velocity.0.x = x_direction as f32 * RUN_SPEED * player.speed_multiplier;
 
         if kb.just_pressed(KeyCode::W) {
             match player_state.0 {
                 PlayerState::Idle | PlayerState::Running => {
-                    velocity.0.y = JUMP_SPEED;
+                    velocity.0.y = JUMP_SPEED * player.jump_multiplier;
                     sfx.play(audio_assets.player_jump.clone());
                 }
                 _ => {}
