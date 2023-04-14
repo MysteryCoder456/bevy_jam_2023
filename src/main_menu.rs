@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_kira_audio::prelude::*;
 
-use crate::{AudioAssets, BackgroundMusicChannel, GameState, UIAssets};
+use crate::{components::ScreenFade, AudioAssets, BackgroundMusicChannel, GameState, UIAssets};
 
 #[derive(Component)]
 struct MainMenu;
@@ -93,7 +93,7 @@ fn despawn_main_menu(mut commands: Commands, query: Query<Entity, With<MainMenu>
 }
 
 fn button_action_system(
-    mut state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
     query: Query<(&ButtonType, &Interaction), Changed<Interaction>>,
 ) {
     for (btn, interaction) in query.iter() {
@@ -103,7 +103,24 @@ fn button_action_system(
 
         // TODO: Add fade effect when transitioning states
         match *btn {
-            ButtonType::Play => state.set(GameState::Level),
+            ButtonType::Play => {
+                commands.spawn((
+                    NodeBundle {
+                        background_color: BackgroundColor(Color::BLACK.with_a(0.)),
+                        style: Style {
+                            position_type: PositionType::Absolute,
+                            size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    },
+                    ScreenFade {
+                        fade_color: Color::BLACK,
+                        fade_timer: Timer::from_seconds(1., TimerMode::Once),
+                        next_state: GameState::Level,
+                    },
+                ));
+            }
         }
     }
 }

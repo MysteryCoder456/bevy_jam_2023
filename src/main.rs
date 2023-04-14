@@ -17,7 +17,7 @@ mod main_menu;
 struct MainCamera;
 
 #[derive(States, Default, Clone, Debug, Hash, Eq, PartialEq)]
-enum GameState {
+pub enum GameState {
     #[default]
     MainMenu,
     Level,
@@ -96,7 +96,7 @@ fn main() {
         setup_audio_channels,
     ))
     .add_system(next_level_system.in_schedule(OnEnter(GameState::LevelCompleted)))
-    .add_system(button_appearance_system);
+    .add_systems((button_appearance_system, screen_fade_system));
 
     #[cfg(feature = "inspector")]
     app.add_plugin(WorldInspectorPlugin::new())
@@ -225,5 +225,24 @@ fn button_appearance_system(
         };
 
         *ui_image = UiImage::new(new_image);
+    }
+}
+
+fn screen_fade_system(
+    time: Res<Time>,
+    mut game_state: ResMut<NextState<GameState>>,
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut BackgroundColor, &mut components::ScreenFade)>,
+) {
+    for (entity, mut bg_color, mut fade) in query.iter_mut() {
+        fade.fade_timer.tick(time.delta());
+        bg_color.0 = fade
+            .fade_color
+            .with_a(fade.fade_timer.elapsed_secs() / fade.fade_timer.duration().as_secs_f32());
+
+        if fade.fade_timer.finished() {
+            game_state.set(fade.next_state.clone());
+            commands.entity(entity).despawn_recursive();
+        }
     }
 }
