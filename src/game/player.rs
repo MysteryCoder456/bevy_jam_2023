@@ -227,10 +227,9 @@ fn player_pill_collision_system(
 
                 match pill.side_effect {
                     SideEffect::Shrink => {
-                        const MULTIPLIER: f32 = 0.85;
-                        player_tf.scale *= MULTIPLIER;
-                        player_col.size *= MULTIPLIER;
-                        player.jump_multiplier *= MULTIPLIER;
+                        player_tf.scale *= 0.73;
+                        player_col.size *= 0.73;
+                        player.jump_multiplier *= 0.85;
                     }
                     SideEffect::Speed => player.speed_multiplier *= 1.5,
                     SideEffect::Slowness => player.speed_multiplier *= 0.7,
@@ -304,7 +303,7 @@ fn player_out_of_bounds_system(
     query: Query<&Transform, With<Player>>,
 ) {
     if let Ok(player_tf) = query.get_single() {
-        if player_tf.translation.y < -10000. {
+        if player_tf.translation.y < -5000. {
             game_state.set(GameState::GameOver);
         }
     }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{GameState, UIAssets};
+use crate::{GameState, SpawnScreenFader, UIAssets};
 
 #[derive(Component)]
 struct GameOverMenu;
@@ -82,12 +82,16 @@ fn despawn_game_over_menu(mut commands: Commands, query: Query<Entity, With<Game
 }
 
 fn try_again_system(
-    mut game_state: ResMut<NextState<GameState>>,
+    mut events: EventWriter<SpawnScreenFader>,
     query: Query<&Interaction, (With<TryAgainButton>, Changed<Interaction>)>,
 ) {
     if let Ok(interaction) = query.get_single() {
         match *interaction {
-            Interaction::Clicked => game_state.set(GameState::Level),
+            Interaction::Clicked => events.send(SpawnScreenFader {
+                fade_color: Color::BLACK,
+                fade_time: 0.8,
+                next_state: GameState::Level,
+            }),
             _ => {}
         }
     }

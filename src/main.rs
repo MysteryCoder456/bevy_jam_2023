@@ -1,6 +1,7 @@
 use bevy::{core_pipeline::clear_color::ClearColorConfig, prelude::*};
 use bevy_kira_audio::prelude::*;
 use bincode::{Decode, Encode};
+use components::ScreenFade;
 use game::GamePlugin;
 use game_over::GameOverPlugin;
 use main_menu::MainMenuPlugin;
@@ -67,6 +68,12 @@ struct BackgroundMusicChannel;
 #[derive(Resource)]
 struct SFXChannel;
 
+struct SpawnScreenFader {
+    fade_color: Color,
+    fade_time: f32,
+    next_state: GameState,
+}
+
 fn main() {
     let mut app = App::new();
 
@@ -86,6 +93,7 @@ fn main() {
     .add_audio_channel::<BackgroundMusicChannel>()
     .add_audio_channel::<SFXChannel>()
     .add_state::<GameState>()
+    .add_event::<SpawnScreenFader>()
     .add_plugin(MainMenuPlugin)
     .add_plugin(GamePlugin)
     .add_plugin(GameOverPlugin)
@@ -96,7 +104,11 @@ fn main() {
         setup_audio_channels,
     ))
     .add_system(next_level_system.in_schedule(OnEnter(GameState::LevelCompleted)))
-    .add_systems((button_appearance_system, screen_fade_system));
+    .add_systems((
+        button_appearance_system,
+        spawn_screen_fader.run_if(on_event::<SpawnScreenFader>()),
+        screen_fade_system,
+    ));
 
     #[cfg(feature = "inspector")]
     app.add_plugin(WorldInspectorPlugin::new())
@@ -225,6 +237,28 @@ fn button_appearance_system(
         };
 
         *ui_image = UiImage::new(new_image);
+    }
+}
+
+fn spawn_screen_fader(mut events: EventReader<SpawnScreenFader>, mut commands: Commands) {
+    for event in events.iter() {
+        commands.spawn((
+            NodeBundle {
+                background_color: BackgroundColor(Color::BLACK.with_a(0.)),
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                    ..Default::default()
+                },
+                z_index: ZIndex::Global(5),
+                ..Default::default()
+            },
+            ScreenFade {
+                fade_color: event.fade_color,
+                fade_timer: Timer::from_seconds(event.fade_time, TimerMode::Once),
+                next_state: event.next_state.clone(),
+            },
+        ));
     }
 }
 
