@@ -68,6 +68,9 @@ struct BackgroundMusicChannel;
 #[derive(Resource)]
 struct SFXChannel;
 
+#[derive(Default)]
+struct SaveGameData;
+
 struct SpawnScreenFader {
     fade_color: Color,
     fade_time: f32,
@@ -93,6 +96,7 @@ fn main() {
     .add_audio_channel::<BackgroundMusicChannel>()
     .add_audio_channel::<SFXChannel>()
     .add_state::<GameState>()
+    .add_event::<SaveGameData>()
     .add_event::<SpawnScreenFader>()
     .add_plugin(MainMenuPlugin)
     .add_plugin(GamePlugin)
@@ -100,9 +104,10 @@ fn main() {
     .add_startup_systems((
         setup_camera,
         setup_assets,
-        setup_game_data,
+        load_game_data,
         setup_audio_channels,
     ))
+    .add_system(save_game_data.run_if(on_event::<SaveGameData>()))
     .add_system(next_level_system.in_schedule(OnEnter(GameState::LevelCompleted)))
     .add_systems((
         button_appearance_system,
@@ -194,7 +199,7 @@ fn setup_assets(
     commands.insert_resource(audio_assets);
 }
 
-fn setup_game_data(mut commands: Commands) {
+fn load_game_data(mut commands: Commands) {
     let game_data_path = "game_data.bin";
     let config = bincode::config::standard();
 
@@ -210,6 +215,14 @@ fn setup_game_data(mut commands: Commands) {
     commands.insert_resource(game_data);
 }
 
+fn save_game_data(game_data: Res<GameData>) {
+    let game_data_path = "game_data.bin";
+    let config = bincode::config::standard();
+
+    let encoded = bincode::encode_to_vec(game_data.into_inner(), config).unwrap();
+    std::fs::write(game_data_path, &encoded).unwrap();
+}
+
 fn setup_audio_channels(
     bgm: Res<AudioChannel<BackgroundMusicChannel>>,
     sfx: Res<AudioChannel<SFXChannel>>,
@@ -221,9 +234,11 @@ fn setup_audio_channels(
 fn next_level_system(
     mut game_state: ResMut<NextState<GameState>>,
     mut game_data: ResMut<GameData>,
+    mut events: EventWriter<SaveGameData>,
 ) {
     game_data.current_level += 1;
     game_state.set(GameState::Level);
+    events.send_default();
 }
 
 fn button_appearance_system(
