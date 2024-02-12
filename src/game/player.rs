@@ -39,9 +39,10 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<PlayerState>()
-            .add_system(spawn_player.in_schedule(OnEnter(GameState::Level)))
-            .add_system(despawn_player.in_schedule(OnExit(GameState::Level)))
+            .add_systems(OnEnter(GameState::Level), spawn_player)
+            .add_systems(OnExit(GameState::Level), despawn_player)
             .add_systems(
+                Update,
                 (
                     player_state_system,
                     player_atlas_change_system
@@ -51,20 +52,20 @@ impl Plugin for PlayerPlugin {
                     camera_follow_system,
                     player_out_of_bounds_system,
                 )
-                    .in_set(OnUpdate(GameState::Level)),
+                    .run_if(in_state(GameState::Level)),
             )
             .add_systems(
+                FixedUpdate,
                 (
                     player_movement_system,
                     player_pill_collision_system,
                     player_patient_collision_system,
                 )
-                    .in_set(OnUpdate(GameState::Level))
-                    .in_schedule(CoreSchedule::FixedUpdate),
+                    .run_if(in_state(GameState::Level)),
             );
 
         #[cfg(debug_assertions)]
-        app.add_system(spawn_game_entity.in_set(OnUpdate(GameState::Level)));
+        app.add_systems(Update, spawn_game_entity.run_if(in_state(GameState::Level)));
 
         #[cfg(feature = "inspector")]
         app.register_type::<Player>();
@@ -160,7 +161,7 @@ fn player_atlas_change_system(
     )>,
 ) {
     if let Ok((mut atlas, mut sprite, mut player)) = query.get_single_mut() {
-        let new_atlas = match player_state.0 {
+        let new_atlas = match player_state.get() {
             PlayerState::Idle => game_assets.player_idle.clone(),
             PlayerState::Running => game_assets.player_run.clone(),
             PlayerState::Jumping => game_assets.player_jump.clone(),
@@ -258,7 +259,7 @@ fn player_patient_collision_system(
 
             if collision.is_some() {
                 let level_handle = levels.0.get(&game_data.current_level).unwrap();
-                let level_data = level_assets.get(&level_handle).unwrap();
+                let level_data = level_assets.get(level_handle).unwrap();
 
                 if player.medicines_collected == level_data.pill_goal {
                     game_state.set(GameState::LevelCompleted);
@@ -287,7 +288,7 @@ fn player_movement_system(
         velocity.0.x = x_direction as f32 * RUN_SPEED * player.speed_multiplier;
 
         if kb.just_pressed(KeyCode::W) {
-            match player_state.0 {
+            match player_state.get() {
                 PlayerState::Idle | PlayerState::Running => {
                     velocity.0.y = JUMP_SPEED * player.jump_multiplier;
                     sfx.play(audio_assets.player_jump.clone());

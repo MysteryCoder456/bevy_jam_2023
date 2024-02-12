@@ -68,9 +68,10 @@ struct BackgroundMusicChannel;
 #[derive(Resource)]
 struct SFXChannel;
 
-#[derive(Default)]
+#[derive(Default, Event)]
 struct SaveGameData;
 
+#[derive(Event)]
 struct SpawnScreenFader {
     fade_color: Color,
     fade_time: f32,
@@ -92,36 +93,42 @@ fn main() {
             })
             .set(ImagePlugin::default_nearest()),
     )
-    .add_plugin(AudioPlugin)
+    .add_plugins(AudioPlugin)
     .add_audio_channel::<BackgroundMusicChannel>()
     .add_audio_channel::<SFXChannel>()
     .add_state::<GameState>()
     .add_event::<SaveGameData>()
     .add_event::<SpawnScreenFader>()
-    .add_plugin(MainMenuPlugin)
-    .add_plugin(GamePlugin)
-    .add_plugin(GameOverPlugin)
-    .add_startup_systems((
-        setup_camera,
-        setup_assets,
-        load_game_data,
-        setup_audio_channels,
-    ))
-    .add_system(save_game_data.run_if(on_event::<SaveGameData>()))
-    .add_system(next_level_system.in_schedule(OnEnter(GameState::LevelCompleted)))
-    .add_systems((
-        button_appearance_system,
-        spawn_screen_fader.run_if(on_event::<SpawnScreenFader>()),
-        screen_fade_system,
-    ));
+    .add_plugins(MainMenuPlugin)
+    .add_plugins(GamePlugin)
+    .add_plugins(GameOverPlugin)
+    .add_systems(
+        Startup,
+        (
+            setup_camera,
+            setup_assets,
+            load_game_data,
+            setup_audio_channels,
+        ),
+    )
+    .add_systems(Update, save_game_data.run_if(on_event::<SaveGameData>()))
+    .add_systems(OnEnter(GameState::LevelCompleted), next_level_system)
+    .add_systems(
+        Update,
+        (
+            button_appearance_system,
+            spawn_screen_fader.run_if(on_event::<SpawnScreenFader>()),
+            screen_fade_system,
+        ),
+    );
 
     #[cfg(feature = "inspector")]
-    app.add_plugin(WorldInspectorPlugin::new())
+    app.add_plugins(WorldInspectorPlugin::new())
         .register_type::<GameData>()
         .register_type::<components::Velocity>()
         .register_type::<components::Gravity>()
         .register_type::<components::RectCollisionShape>()
-        .add_plugin(ResourceInspectorPlugin::<GameData>::default());
+        .add_plugins(ResourceInspectorPlugin::<GameData>::default());
 
     app.run();
 }
@@ -247,7 +254,7 @@ fn button_appearance_system(
 ) {
     for (mut ui_image, interaction) in query.iter_mut() {
         let new_image = match *interaction {
-            Interaction::Clicked | Interaction::Hovered => ui_assets.button_pressed.clone(),
+            Interaction::Pressed | Interaction::Hovered => ui_assets.button_pressed.clone(),
             _ => ui_assets.button.clone(),
         };
 
@@ -256,13 +263,14 @@ fn button_appearance_system(
 }
 
 fn spawn_screen_fader(mut events: EventReader<SpawnScreenFader>, mut commands: Commands) {
-    for event in events.iter() {
+    for event in events.read() {
         commands.spawn((
             NodeBundle {
                 background_color: BackgroundColor(Color::BLACK.with_a(0.)),
                 style: Style {
                     position_type: PositionType::Absolute,
-                    size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
                     ..Default::default()
                 },
                 z_index: ZIndex::Global(5),

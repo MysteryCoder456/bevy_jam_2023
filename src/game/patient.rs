@@ -5,6 +5,7 @@ use crate::{components::RectCollisionShape, GameAssets, GameState};
 
 const ANIMATION_SPEED: f32 = 3.;
 
+#[derive(Event)]
 pub struct SpawnPatientEvent(pub Vec2);
 
 #[derive(Component)]
@@ -18,13 +19,15 @@ pub struct PatientPlugin;
 impl Plugin for PatientPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnPatientEvent>()
-            .add_system(
-                spawn_patient
-                    .in_set(OnUpdate(GameState::Level))
-                    .run_if(on_event::<SpawnPatientEvent>()),
+            .add_systems(
+                Update,
+                (
+                    spawn_patient.run_if(on_event::<SpawnPatientEvent>()),
+                    patient_animation_system,
+                )
+                    .run_if(in_state(GameState::Level)),
             )
-            .add_system(despawn_patient.in_schedule(OnExit(GameState::Level)))
-            .add_system(patient_animation_system.in_set(OnUpdate(GameState::Level)));
+            .add_systems(OnExit(GameState::Level), despawn_patient);
     }
 }
 
@@ -33,7 +36,7 @@ fn spawn_patient(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
 ) {
-    for event in events.iter() {
+    for event in events.read() {
         commands.spawn((
             SpriteSheetBundle {
                 texture_atlas: game_assets.patient.clone(),

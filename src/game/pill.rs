@@ -6,6 +6,7 @@ use crate::{components::RectCollisionShape, GameAssets, GameState};
 
 const ANIMATION_SPEED: f32 = 44.; // frames per second
 
+#[derive(Event)]
 pub struct SpawnPillEvent {
     pub position: Vec2,
     pub side_effect: SideEffect,
@@ -40,13 +41,15 @@ pub struct PillPlugin;
 impl Plugin for PillPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnPillEvent>()
-            .add_system(
-                spawn_pill
-                    .in_set(OnUpdate(GameState::Level))
-                    .run_if(on_event::<SpawnPillEvent>()),
+            .add_systems(
+                Update,
+                (
+                    spawn_pill.run_if(on_event::<SpawnPillEvent>()),
+                    pill_animation_system,
+                )
+                    .run_if(in_state(GameState::Level)),
             )
-            .add_system(despawn_pills.in_schedule(OnExit(GameState::Level)))
-            .add_system(pill_animation_system.in_set(OnUpdate(GameState::Level)));
+            .add_systems(OnExit(GameState::Level), despawn_pills);
 
         #[cfg(feature = "inspector")]
         app.register_type::<Pill>();
@@ -58,7 +61,7 @@ fn spawn_pill(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
 ) {
-    for event in events.iter() {
+    for event in events.read() {
         commands.spawn((
             SpriteSheetBundle {
                 texture_atlas: game_assets.pill.clone(),

@@ -1,5 +1,5 @@
 use bevy::{
-    asset::{AssetLoader, LoadedAsset},
+    asset::{AssetLoader, AsyncReadExt},
     prelude::*,
     reflect::TypeUuid,
     sprite::collide_aabb::{collide, Collision},
@@ -11,6 +11,7 @@ use pill::{PillPlugin, SpawnPillEvent};
 use platform::{PlatformPlugin, SpawnPlatformEvent};
 use player::PlayerPlugin;
 use serde::Deserialize;
+use thiserror::Error;
 
 use crate::{
     components::{Gravity, RectCollisionShape, Velocity},
@@ -24,14 +25,14 @@ mod platform;
 mod player;
 
 const SPRITE_SCALE: f32 = 3.;
-const FIXED_TIMESTEP: f32 = 1. / 60.;
+const FIXED_FREQUENCY: f64 = 60.;
 const GRAVITY: f32 = 50.;
 const MAX_LEVELS: usize = 5;
 
-#[derive(Resource)]
+#[derive(Resource, Asset, TypePath)]
 struct Levels(HashMap<usize, Handle<LevelData>>);
 
-#[derive(Deserialize, TypeUuid)]
+#[derive(Deserialize, TypeUuid, Asset, TypePath)]
 #[uuid = "2b2bea01-bf6b-475d-90d6-ccaae422666f"]
 struct LevelData {
     platforms: Vec<Vec2>,
@@ -45,20 +46,36 @@ struct LevelData {
 #[derive(Default)]
 struct LevelDataLoader;
 
+#[non_exhaustive]
+#[derive(Debug, Error)]
+enum LevelDataLoaderError {
+    #[error("Could not load asset: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("Could not parse JSON: {0}")]
+    JsonParseError(#[from] serde_json::error::Error),
+}
+
 impl AssetLoader for LevelDataLoader {
+    type Asset = LevelData;
+    type Settings = ();
+    type Error = LevelDataLoaderError;
+
     fn extensions(&self) -> &[&str] {
         &["json"]
     }
 
     fn load<'a>(
         &'a self,
-        bytes: &'a [u8],
-        load_context: &'a mut bevy::asset::LoadContext,
-    ) -> bevy::utils::BoxedFuture<'a, Result<(), bevy::asset::Error>> {
+        reader: &'a mut bevy::asset::io::Reader,
+        _settings: &'a Self::Settings,
+        _load_context: &'a mut bevy::asset::LoadContext,
+    ) -> bevy::utils::BoxedFuture<'a, Result<Self::Asset, Self::Error>> {
         Box::pin(async move {
-            let data = serde_json::from_slice::<LevelData>(bytes)?;
-            load_context.set_default_asset(LoadedAsset::new(data));
-            Ok(())
+            let mut bytes = Vec::new();
+            reader.read_to_end(&mut bytes).await?;
+            let data = serde_json::from_slice(&bytes)?;
+            Ok(data)
         })
     }
 }
@@ -76,24 +93,25 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(PlayerPlugin)
-            .add_plugin(PlatformPlugin)
-            .add_plugin(PillPlugin)
-            .add_plugin(FloatingLabelPlugin)
-            .add_plugin(PatientPlugin)
-            .add_asset::<LevelData>()
+        app.add_plugins(PlayerPlugin)
+            .add_plugins(PlatformPlugin)
+            .add_plugins(PillPlugin)
+            .add_plugins(FloatingLabelPlugin)
+            .add_plugins(PatientPlugin)
+            .init_asset::<LevelData>()
             .init_asset_loader::<LevelDataLoader>()
-            .add_startup_system(load_level_data)
-            .add_systems((spawn_world, spawn_hud).in_schedule(OnEnter(GameState::Level)))
-            .add_system(despawn_hud.in_schedule(OnExit(GameState::Level)))
+            .add_systems(Startup, load_level_data)
+            .add_systems(OnEnter(GameState::Level), (spawn_world, spawn_hud))
+            .add_systems(OnExit(GameState::Level), despawn_hud)
             .add_systems(
+                FixedUpdate,
                 (gravity_system, velocity_system, collision_system)
                     .chain()
-                    .in_set(OnUpdate(GameState::Level))
-                    .in_schedule(CoreSchedule::FixedUpdate),
+                    .run_if(in_state(GameState::Level)),
             )
-            .add_system(stopwatch_system.in_set(OnUpdate(GameState::Level)))
-            .insert_resource(FixedTime::new_from_secs(FIXED_TIMESTEP));
+            .add_systems(Update, stopwatch_system.run_if(in_state(GameState::Level)))
+            // TODO: Change this line
+            .insert_resource(Time::<Fixed>::from_hz(FIXED_FREQUENCY));
     }
 }
 
@@ -118,7 +136,7 @@ fn spawn_world(
     levels: Res<Levels>,
 ) {
     let level_handle = levels.0.get(&game_data.current_level).unwrap();
-    let level_data = level_assets.get(&level_handle).unwrap();
+    let level_data = level_assets.get(level_handle).unwrap();
 
     platform_events.send_batch(
         level_data
@@ -150,13 +168,14 @@ fn spawn_hud(
     levels: Res<Levels>,
 ) {
     let level_handle = levels.0.get(&game_data.current_level).unwrap();
-    let level_data = level_assets.get(&level_handle).unwrap();
+    let level_data = level_assets.get(level_handle).unwrap();
 
     commands
         .spawn((
             NodeBundle {
                 style: Style {
-                    size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
                     flex_direction: FlexDirection::Column,
                     justify_content: JustifyContent::FlexStart,
                     padding: UiRect::all(Val::Px(10.)),
@@ -169,7 +188,8 @@ fn spawn_hud(
         .with_children(|hud| {
             hud.spawn(NodeBundle {
                 style: Style {
-                    size: Size::new(Val::Percent(100.), Val::Auto),
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
                     flex_direction: FlexDirection::Row,
                     justify_content: JustifyContent::SpaceBetween,
                     ..Default::default()
@@ -228,9 +248,9 @@ fn stopwatch_system(
     }
 }
 
-fn velocity_system(time: Res<FixedTime>, mut query: Query<(&mut Transform, &Velocity)>) {
+fn velocity_system(time: Res<Time<Fixed>>, mut query: Query<(&mut Transform, &Velocity)>) {
     for (mut tf, velocity) in query.iter_mut() {
-        tf.translation += velocity.0.extend(0.) * time.period.as_secs_f32();
+        tf.translation += velocity.0.extend(0.) * time.delta_seconds();
     }
 }
 

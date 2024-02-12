@@ -15,9 +15,12 @@ pub struct MainMenuPlugin;
 
 impl Plugin for MainMenuPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(spawn_main_menu.in_schedule(OnEnter(GameState::MainMenu)))
-            .add_system(despawn_main_menu.in_schedule(OnExit(GameState::MainMenu)))
-            .add_system(button_action_system.in_set(OnUpdate(GameState::MainMenu)));
+        app.add_systems(OnEnter(GameState::MainMenu), spawn_main_menu)
+            .add_systems(OnExit(GameState::MainMenu), despawn_main_menu)
+            .add_systems(
+                Update,
+                button_action_system.run_if(in_state(GameState::MainMenu)),
+            );
     }
 }
 
@@ -35,9 +38,10 @@ fn spawn_main_menu(
         .spawn((
             NodeBundle {
                 style: Style {
-                    size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
                     display: Display::Flex,
-                    gap: Size::new(Val::Undefined, Val::Px(8.)),
+                    row_gap: Val::Px(8.),
                     flex_direction: FlexDirection::Column,
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
@@ -97,7 +101,7 @@ fn button_action_system(
     query: Query<(&ButtonType, &Interaction), Changed<Interaction>>,
 ) {
     for (btn, interaction) in query.iter() {
-        if *interaction != Interaction::Clicked {
+        if *interaction != Interaction::Pressed {
             continue;
         }
 

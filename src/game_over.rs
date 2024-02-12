@@ -12,9 +12,12 @@ pub struct GameOverPlugin;
 
 impl Plugin for GameOverPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(spawn_game_over_menu.in_schedule(OnEnter(GameState::GameOver)))
-            .add_system(despawn_game_over_menu.in_schedule(OnExit(GameState::GameOver)))
-            .add_system(try_again_system.in_set(OnUpdate(GameState::GameOver)));
+        app.add_systems(OnEnter(GameState::GameOver), spawn_game_over_menu)
+            .add_systems(OnExit(GameState::GameOver), despawn_game_over_menu)
+            .add_systems(
+                Update,
+                try_again_system.run_if(in_state(GameState::GameOver)),
+            );
     }
 }
 
@@ -23,9 +26,10 @@ fn spawn_game_over_menu(mut commands: Commands, ui_assets: Res<UIAssets>) {
         .spawn((
             NodeBundle {
                 style: Style {
-                    size: Size::new(Val::Percent(100.), Val::Percent(100.)),
+                    width: Val::Percent(100.),
+                    height: Val::Percent(100.),
                     display: Display::Flex,
-                    gap: Size::new(Val::Undefined, Val::Px(8.)),
+                    row_gap: Val::Px(8.),
                     flex_direction: FlexDirection::Column,
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
@@ -87,7 +91,7 @@ fn try_again_system(
 ) {
     if let Ok(interaction) = query.get_single() {
         match *interaction {
-            Interaction::Clicked => events.send(SpawnScreenFader {
+            Interaction::Pressed => events.send(SpawnScreenFader {
                 fade_color: Color::BLACK,
                 fade_time: 0.8,
                 next_state: GameState::Level,

@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::{GameState, UIAssets};
 
+#[derive(Event)]
 pub struct SpawnFloatingLabelEvent(pub String, pub Vec2);
 
 #[derive(Component)]
@@ -12,12 +13,13 @@ pub struct FloatingLabelPlugin;
 impl Plugin for FloatingLabelPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnFloatingLabelEvent>()
-            .add_system(
-                spawn_label
-                    .in_set(OnUpdate(GameState::Level))
-                    .run_if(on_event::<SpawnFloatingLabelEvent>()),
+            .add_systems(
+                Update,
+                spawn_label.run_if(
+                    in_state(GameState::Level).and_then(on_event::<SpawnFloatingLabelEvent>()),
+                ),
             )
-            .add_system(despawn_labels.in_schedule(OnExit(GameState::Level)));
+            .add_systems(OnExit(GameState::Level), despawn_labels);
     }
 }
 
@@ -26,7 +28,7 @@ fn spawn_label(
     mut commands: Commands,
     mut events: EventReader<SpawnFloatingLabelEvent>,
 ) {
-    for event in events.iter() {
+    for event in events.read() {
         commands.spawn((
             Text2dBundle {
                 text: Text {

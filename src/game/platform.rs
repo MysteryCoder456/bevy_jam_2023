@@ -3,6 +3,7 @@ use bevy::prelude::*;
 use super::SPRITE_SCALE;
 use crate::{components::RectCollisionShape, GameAssets, GameState};
 
+#[derive(Event)]
 pub struct SpawnPlatformEvent(pub Vec2);
 
 #[derive(Component)]
@@ -13,12 +14,12 @@ pub struct PlatformPlugin;
 impl Plugin for PlatformPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<SpawnPlatformEvent>()
-            .add_system(
+            .add_systems(
+                Update,
                 spawn_platform
-                    .in_set(OnUpdate(GameState::Level))
-                    .run_if(on_event::<SpawnPlatformEvent>()),
+                    .run_if(in_state(GameState::Level).and_then(on_event::<SpawnPlatformEvent>())),
             )
-            .add_system(despawn_platforms.in_schedule(OnExit(GameState::Level)));
+            .add_systems(OnExit(GameState::Level), despawn_platforms);
     }
 }
 
@@ -27,7 +28,7 @@ fn spawn_platform(
     mut commands: Commands,
     game_assets: Res<GameAssets>,
 ) {
-    for event in events.iter() {
+    for event in events.read() {
         commands.spawn((
             SpriteBundle {
                 texture: game_assets.platform.clone(),
