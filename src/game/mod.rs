@@ -110,7 +110,6 @@ impl Plugin for GamePlugin {
                     .run_if(in_state(GameState::Level)),
             )
             .add_systems(Update, stopwatch_system.run_if(in_state(GameState::Level)))
-            // TODO: Change this line
             .insert_resource(Time::<Fixed>::from_hz(FIXED_FREQUENCY));
     }
 }

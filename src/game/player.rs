@@ -50,6 +50,7 @@ impl Plugin for PlayerPlugin {
                         .after(player_state_system),
                     player_animation_system.after(player_atlas_change_system),
                     camera_follow_system,
+                    player_jump_system,
                     player_out_of_bounds_system,
                 )
                     .run_if(in_state(GameState::Level)),
@@ -233,7 +234,7 @@ fn player_pill_collision_system(
                         player.jump_multiplier *= 0.85;
                     }
                     SideEffect::Speed => player.speed_multiplier *= 1.5,
-                    SideEffect::Slowness => player.speed_multiplier *= 0.7,
+                    SideEffect::Slowness => player.speed_multiplier *= 0.8,
                 }
             }
         }
@@ -271,9 +272,6 @@ fn player_patient_collision_system(
 
 fn player_movement_system(
     kb: Res<Input<KeyCode>>,
-    player_state: Res<State<PlayerState>>,
-    sfx: Res<AudioChannel<SFXChannel>>,
-    audio_assets: Res<AudioAssets>,
     mut query: Query<(&mut Velocity, &mut TextureAtlasSprite, &Player)>,
 ) {
     if let Ok((mut velocity, mut sprite, player)) = query.get_single_mut() {
@@ -286,8 +284,18 @@ fn player_movement_system(
         }
 
         velocity.0.x = x_direction as f32 * RUN_SPEED * player.speed_multiplier;
+    }
+}
 
-        if kb.just_pressed(KeyCode::W) {
+fn player_jump_system(
+    kb: Res<Input<KeyCode>>,
+    player_state: Res<State<PlayerState>>,
+    sfx: Res<AudioChannel<SFXChannel>>,
+    audio_assets: Res<AudioAssets>,
+    mut query: Query<(&mut Velocity, &Player)>,
+) {
+    if kb.just_pressed(KeyCode::W) {
+        if let Ok((mut velocity, player)) = query.get_single_mut() {
             match player_state.get() {
                 PlayerState::Idle | PlayerState::Running => {
                     velocity.0.y = JUMP_SPEED * player.jump_multiplier;
