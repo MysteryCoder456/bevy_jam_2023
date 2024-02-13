@@ -3,8 +3,9 @@ use bevy_kira_audio::prelude::*;
 
 use super::{
     patient::Patient,
-    pill::{Pill, SideEffect, SpawnPillEvent},
+    pill::{Pill, SpawnPillEvent},
     platform::SpawnPlatformEvent,
+    side_effects::ApplySideEffectEvent,
     CollectedLabel, LevelData, Levels, SPRITE_SCALE,
 };
 use crate::{
@@ -17,12 +18,12 @@ const RUN_SPEED: f32 = 350.;
 const JUMP_SPEED: f32 = 1000.;
 
 #[derive(Component, Reflect, Default)]
-struct Player {
-    animation_timer: Timer,
-    animation_length: usize,
-    medicines_collected: u32,
-    jump_multiplier: f32,
-    speed_multiplier: f32,
+pub struct Player {
+    pub animation_timer: Timer,
+    pub animation_length: usize,
+    pub medicines_collected: u32,
+    pub jump_multiplier: f32,
+    pub speed_multiplier: f32,
 }
 
 #[derive(States, Default, Clone, Debug, Hash, Eq, PartialEq)]
@@ -205,11 +206,12 @@ fn player_pill_collision_system(
     mut commands: Commands,
     sfx: Res<AudioChannel<SFXChannel>>,
     audio_assets: Res<AudioAssets>,
-    mut player_query: Query<(&mut Transform, &mut RectCollisionShape, &mut Player)>,
+    mut side_effect_events: EventWriter<ApplySideEffectEvent>,
+    mut player_query: Query<(&Transform, &RectCollisionShape, &mut Player)>,
     pill_query: Query<(Entity, &Transform, &RectCollisionShape, &Pill), Without<Player>>,
     mut label_query: Query<&mut Text, With<CollectedLabel>>,
 ) {
-    if let Ok((mut player_tf, mut player_col, mut player)) = player_query.get_single_mut() {
+    if let Ok((player_tf, player_col, mut player)) = player_query.get_single_mut() {
         for (pill_entity, pill_tf, pill_col, pill) in pill_query.iter() {
             let collision = collide(
                 player_tf.translation,
@@ -227,15 +229,7 @@ fn player_pill_collision_system(
                     text.sections[1].value = player.medicines_collected.to_string();
                 }
 
-                match pill.side_effect {
-                    SideEffect::Shrink => {
-                        player_tf.scale *= 0.73;
-                        player_col.size *= 0.73;
-                        player.jump_multiplier *= 0.85;
-                    }
-                    SideEffect::Speed => player.speed_multiplier *= 1.5,
-                    SideEffect::Slowness => player.speed_multiplier *= 0.8,
-                }
+                side_effect_events.send(ApplySideEffectEvent(pill.side_effect));
             }
         }
     }

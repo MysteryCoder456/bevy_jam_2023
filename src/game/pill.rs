@@ -1,7 +1,6 @@
 use bevy::prelude::*;
-use rand::distributions::{Distribution, Standard};
 
-use super::SPRITE_SCALE;
+use super::{side_effects::SideEffect, SPRITE_SCALE};
 use crate::{components::RectCollisionShape, GameAssets, GameState};
 
 const ANIMATION_SPEED: f32 = 44.; // frames per second
@@ -10,23 +9,6 @@ const ANIMATION_SPEED: f32 = 44.; // frames per second
 pub struct SpawnPillEvent {
     pub position: Vec2,
     pub side_effect: SideEffect,
-}
-
-#[derive(Clone, Reflect)]
-pub enum SideEffect {
-    Shrink,
-    Speed,
-    Slowness,
-}
-
-impl Distribution<SideEffect> for Standard {
-    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> SideEffect {
-        match rng.gen_range(0..=2) {
-            0 => SideEffect::Shrink,
-            1 => SideEffect::Speed,
-            _ => SideEffect::Slowness,
-        }
-    }
 }
 
 #[derive(Component, Reflect)]

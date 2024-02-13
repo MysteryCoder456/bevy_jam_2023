@@ -11,6 +11,7 @@ use pill::{PillPlugin, SpawnPillEvent};
 use platform::{PlatformPlugin, SpawnPlatformEvent};
 use player::PlayerPlugin;
 use serde::Deserialize;
+use side_effects::SideEffectsPlugin;
 use thiserror::Error;
 
 use crate::{
@@ -23,6 +24,7 @@ mod patient;
 mod pill;
 mod platform;
 mod player;
+mod side_effects;
 
 const SPRITE_SCALE: f32 = 3.;
 const FIXED_FREQUENCY: f64 = 60.;
@@ -98,6 +100,7 @@ impl Plugin for GamePlugin {
             .add_plugins(PillPlugin)
             .add_plugins(FloatingLabelPlugin)
             .add_plugins(PatientPlugin)
+            .add_plugins(SideEffectsPlugin)
             .init_asset::<LevelData>()
             .init_asset_loader::<LevelDataLoader>()
             .add_systems(Startup, load_level_data)
